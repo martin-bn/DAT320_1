@@ -1,0 +1,61 @@
+\documentclass[a4paper]{article}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\graphicspath{{./figs/}}
+
+\begin{document}
+
+\section*{(A)}
+The autocorrelation for sequance of elements is given by: $cor(x_t, B^k (x_t))$ 
+and that the back shift operator is defiend as: $ B^{k}(x_t) = x_{t-k} \text{ and } B^{-k}(x_t) = x_{t+k} $
+\begin{align*}
+    acf(k) &= cor(x_t, B^k (x_t)), t > k \\
+    &= cor(x_{x_{t + k}}, B^k(x_{t + k})) \\
+    &= cor( B^{-k}(x_{t}), B^{-k}(B^k( x_t )) ) \\
+    &= cor(B^{-k}(x_t), x_t) \\
+    &= \tilde{acf}(k)
+\end{align*}
+
+
+\section*{(B)}
+By following the same logic from A for acf, then ccf fail and based on 
+that result we conclude that $\tilde{ccf}(k) \neq ccf(k)$, and is showed her:
+\begin{align*}
+    \tilde{ccf}(k) &= cor(x_t, B^{-k}(y_t)) \\
+    ccf(k) &= cor(x_{x_{t}}, B^k(y_{t})) \\
+    &= cor(x_{x_{t + k}}, B^k(y_{t + k})) \\
+    &= cor( B^{-k}(x_{t}), B^{-k}(B^k( y_t )) ) \\
+    &= cor(B^{-k}(x_t), y_t) \\
+    & \neq  cor(x_t, B^{-k}(y_t)) = \tilde{ccf}(k)\\
+\end{align*}
+The back shift operator has changed feature to shift and diraction, which result 
+in the opposite effect that we are looking for $\tilde{ccf}$. When we use the method from A 
+we go from backshofting y to forward shift x, when $\tilde{ccf}$ forward shift y witch is 
+the opposite direction and reflect the $ccf(k)$
+
+\section*{(C)}
+\begin{itemize}
+    \item (A): Time series A have ACF 3 as its auto correlation plot. Based on the that 
+    TS1 is only noise and the only point of correlation are for 0 lag, and every other lag 
+    has random and insignificant correlation.
+    \item (B): Time series B have ACF2 as its ait correaltion plot. Based on linear drop of corelation for 
+    every increments of lag.
+    \item (C): Time Series C have ACF as its auto correaltion plot. Based on the shape 
+    of TS 3 can be represented as a cosine fucntion with some noise. witch will result in 
+    a smooth changh in correaltion for each lag and negavtiv corealtion when the the distibution is 
+    lag with the same lenght of half a periode
+    \item (D): Time series D hace ACF 1 as its auto correaltion plot. Based on the fact that 
+    TS 4 can be reprecentet by two different cosine function. one with long periodes and on short. This wil 
+    result in a big and smale fluctuation on the bigger curve of the auto correaltion.
+\end{itemize}
+
+\section*{(D)}
+The Autocorrelation of TS3 and TS5 wil be the same, because TS 5 is lagged version of 
+TS 3. if we set TS3 as x feature and TS5 as y feautre. For each backshift of y will make the time series more similar.
+By the visualizations it seems to me lag with about 15 increments. So the cross corelation plot will  start with a correaltion around 0. 
+and will for each lag increas the correlation until both time series are synchronised for so decrease for each lag. 
+The shape wil then look like for most of the plot like a half circle.
+
+\end{document}
