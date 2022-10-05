@@ -28,7 +28,7 @@ library('factoextra')
 
 ```
 
-### Task A
+### Task A: Exploratory analysis
 
 ```{r Data, message=FALSE}
 
@@ -85,15 +85,6 @@ names(df) <- c('Date', 'Sweden', 'Denmark', 'Norway',
 ```
 
 
-### Exploratory analysis
-
-#### Dimensionality and time-index
-
-After restricting the dataset, the series is a univariate time series with 
-only one variable that is varying over time and a single object measured. 
-The time domain is selected to be from 16.03.2020 to 01.01.2022.
-There is one measurement each day, so the resolution is daily 
-and the time step is one day. 
 
 
 ```{r Summary statistics}
@@ -187,16 +178,21 @@ covid_plot + ggtitle('Daily cases for each country')
 
 #### Comments to Task A
 
-The time-series contains no missing values for either of the countries.
-Since Sweden did not test for covid every day, 
-the time series for this country contains many values that are 0.
-Denmark, Great Britain and India have some entries that are
-below 0. This can be seen from the minimum value in the summary statistics and
-also in the line plot.
+#### 
+
+
+After restricting the dataset to the specified column, the series is a 
+univariate time series with only one variable that is varying over. The time domain is selected to be from 16.03.2020 to 01.01.2022. 
+There is one measurement each day, so the time series has daily resolution.
+The dataset looks complete, since either of the countries had missing values 
+for the measurement of new cases. However, since Sweden did not test for covid every day, the series for this 
+country contains many values that are 0. Denmark, Great Britain and India have some entries that are below 0. This can be seen from the minimum value in the summary statistics and also in the line plot.
 
 
 
-### Task B
+
+
+### Task B: Correlation
 
 ```{r Correlation, out.width='70%', out.height='70%'}
 
@@ -209,95 +205,79 @@ heatmap(corr)
 
 ```
 
-From the correlation matrix it can be seen that Denmark, Norway, Great Britain 
-and Italia show high, positive correlation with each other. 
-The value for the correlation coefficient between Norway and Italia is 
-0.429, and is above 0.6 for the other countries mentioned.
-Sweden show relatively low correlation with the other countries. India is negatively correlated with the other countries, except from Sweden.
 
-```{r Auto-correlation, out.width='60%', out.height='60%'}
+
+```{r Auto-correlation, out.width='50%', out.height='50%'}
 
 # Producing plots for each of the countries
 acf(df$Sweden)
-# acf(df$Denmark)
-# acf(df$Norway)
-# acf(df$Britain)
-# acf(df$Italia)
-# acf(df$India)
+acf(df$Denmark)
+acf(df$Norway)
+acf(df$Britain)
+acf(df$Italia)
+acf(df$India)
 
 ```
 
 
-Looking at the auto-correlation for each country, Denmark, Norway, Great Britain
-and India shows a slowly decreasing correlation as the lag increases.
-All the mentioned countries show some cyclical behavior in the correlation,
-with the differences between peaks of 7 days. 
-India only shows a slowly decreasing correlation as the lag increases, but 
-over the line for significant correlation for all the lags visualized. 
-Sweden also show 7-days cycles with highest correlation at the peaks, 
-but with much lower correlation for the other days. 
-Sweden also show negative values for the correlation coefficient. 
 
 
 ```{r Cross-correlation, out.width='60%', out.height='60%'}
 
 # Producing plots between the different countries
 
-"
-# Sweden
 ccf(df$Sweden, df$Denmark)
 ccf(df$Sweden, df$Norway)
-ccf(df$Sweden, df$Britain)
-ccf(df$Sweden, df$Italia)
+# ccf(df$Sweden, df$Britain)
+# ccf(df$Sweden, df$Italia)
 ccf(df$Sweden, df$India)
 
-# Denmark
 ccf(df$Denmark, df$Norway)
-ccf(df$Denmark, df$Britain)
-ccf(df$Denmark, df$Italia)
-ccf(df$Denmark, df$India)
+# ccf(df$Denmark, df$Britain)
+# ccf(df$Denmark, df$Italia)
+# ccf(df$Denmark, df$India)
 
-# Norway
-ccf(df$Norway, df$Denmark)
-ccf(df$Norway, df$Britain)
-ccf(df$Norway, df$Italia)
-ccf(df$Norway, df$India)
+# ccf(df$Norway, df$Britain)
+# ccf(df$Norway, df$Italia)
+# ccf(df$Norway, df$India)
 
-# Britain
-ccf(df$Britain, df$Denmark)
-ccf(df$Britain, df$Norway)
 ccf(df$Britain, df$Italia)
 ccf(df$Britain, df$India)
 
-# Italia
-ccf(df$Italia, df$Denmark)
-ccf(df$Italia, df$Norway)
-ccf(df$Italia, df$Britain)
 ccf(df$Italia, df$India)
 
-# India
-ccf(df$India, df$Denmark)
-ccf(df$India, df$Norway)
-ccf(df$India, df$Britain)
-" 
-ccf(df$India, df$Italia)
 
 ```
 
 
+### Comments to Task B
+
+###
+
+From the correlation matrix it can be seen that Denmark, Norway, Great Britain 
+and Italia show high, positive correlation with each other. 
+The value for the correlation coefficient between Norway and Italia is 
+0.429 and above 0.6 for the other countries mentioned.
+Sweden show relatively low correlation with the other countries. India is negatively correlated with the other countries, except from Sweden.
+
+Looking at the autocorrelation plots for each country; all the countries, 
+except Sweden, have spikes above the line for being statistically significant. 
+This mean the measurements in the series are positively autocorrelated for 
+lags up to 28 days. The autocorrelation plot for Sweden indicate autocorrelation
+for lags up to 3 days, then it alternates between 2 days of no 
+autocorrelation and 5 days with autocorrelation. 
+
+Due to the amount of plots, not all the cross-correlation plots are
+displayed.
 Denmark, Norway, Great Britain and Italia show statistically significant
-positive correlation for the entire period visualized; -25 to +25 days lag.
-Sweden show cyclical behavior in the cross-correlation with the other 
-countries, with variation in the coefficient values, but mostly positive. 
-India show positive values for the cross-correlation coefficient with Sweden
-and both negative and positive values for the coefficient with Italia. For the
-other countries, India shows negative cross-correlation for the entire
-period visualized, and mostly significantly high values. 
-The plot for the cross-correlation between India and Italia is shown as an 
-example. The cross-correlation is significantly negative up until a lag of 
--8 days. The value for the coefficient increases, turn positive at a lag
-of 3 days and the times series becomes significantly correlated after 13 
-days lag. 
+positive cross-correlation for the entire period visualized; -25 to +25 days lag.
+Sweden shows cross-correlation between Italia and with India up to a lag
+of 13 days. With Denmark, Norway and Great Britain, Sweden shows cyclical
+periods of cross-correlation and no cross-correlation. 
+The plots for India indicate positive cross-correlation with Sweden, and both
+negative and positive cross-correlation with Italia. For the other countries, 
+the plots show that India has negative cross-correlation for the entire
+period visualized, and mostly significantly low values. 
 
 
 
@@ -486,13 +466,14 @@ fviz_pca_biplot(df.pca, repel = FALSE,
 Different sizes for the kernel was tested for smoothing the series, with
 the example shown for Sweden. k=3 showed to be too low to filter away
 the measurements that were set to 0 and a kernel size of 100 could result in
-smoothing the curve to much. Choosing a kernel size of 30 or 60 
-seamed to be appropriate. 
-Smoothing the entire series and looking at the line plot for the smoothed 
-series, showed that a kernel size of 7 or higher also filtered 
+smoothing the curve to much. An appropriate kernel size could be 10, 30 or 60.
+By smoothing the entire series and looking at the line plot for the smoothed 
+series, it showed that a kernel size of 7 or higher also filtered 
 away the negative values.
 When performing the principal component analysis, the variance explained by
-the first component decreased some, but the differences between the countries
-became smaller, except for India.
+the first component decreased some. After smoothing, the difference between
+Italia and Denmark, Norway and Great Britain decreased, but Italia showed to 
+be more similar to Sweden. India still lies in the opposite direction along the
+first principal component after smoothing the series. 
 
 
