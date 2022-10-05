@@ -263,28 +263,34 @@ fviz_pca_biplot(df.pca, repel = FALSE,
 # ------------------------------------------------------------------------------
 # Sweden
 swe1 <- zoo::rollmean(df$Sweden, k=3, fill=NA)
-swe2 <- zoo::rollmean(df$Sweden, k=7, fill=NA)
+swe2 <- zoo::rollmean(df$Sweden, k=10, fill=NA)
 swe3 <- zoo::rollmean(df$Sweden, k=30, fill=NA)
-dfSweden <- data.frame(date, swe1, swe2, swe3)
+swe4 <- zoo::rollmean(df$Sweden, k=60, fill=NA)
+dfSweden <- data.frame(date, swe1, swe2, swe3, swe4)
 
 
 # Line plot of smoothing with different value for the kernel size
-p <- ggplot(dfSweden, aes(x=date)) + 
-  geom_line(aes(y=swe1), color='#CD950C') + 
-  geom_point(aes(y=swe1), color='#CD950C', size=0.5) + 
-  geom_line(aes(y=swe2), color='#009ACD') + 
-  geom_point(aes(y=swe2), color='#009ACD', size=0.5) +
-  geom_point(aes(y=swe3), color='#8A360F', size=0.5) +
-  geom_line(aes(y=swe3), color='#8A360F') + 
-  labs(x='', y='New cases', color='legend') 
-p
+colors <- c('k=3'='#CD950C', 'k=10'='#009ACD', 'k=30'='#8A360F',
+            'k=60'='#CD3333')
+
+ggplot(dfSweden, aes(x=date)) +
+  geom_line(aes(y=swe1, color='k=3'), size=1.0) +
+  geom_point(aes(y=swe1, color='k=3'), size=0.5) +
+  geom_line(aes(y=swe2, color='k=10'), size=1.0) + 
+  geom_point(aes(y=swe2, color='k=10'), size=0.5) +
+  geom_line(aes(y=swe3, color='k=30'), size=1.0) +
+  geom_point(aes(y=swe3, color='k=30'), size=0.5) +
+  geom_line(aes(y=swe4, color='k=60'), size=1.0) +
+  geom_point(aes(y=swe4, color='k=60'), size=0.5) +
+  labs(x='Date', y='New cases', color='Kernel size') +
+  scale_color_manual(values=colors)
 
 
 # Smoothing entire time-series
 # ------------------------------------------------------------------------------
 date <- df$Date
 dfS <- select(df, Sweden, Denmark, Britain, Norway, Italia, India)
-dfS <- zoo::rollmean(dfS, k=7, fill=NA)
+dfS <- zoo::rollmean(dfS, k=60, fill=NA)
 
 # New data.frame
 dfSm <- data.frame(date, dfS[,'Sweden'], dfS[,'Denmark'],
@@ -295,21 +301,25 @@ names(dfSm) <- c('Date', 'Sweden', 'Denmark', 'Norway',
                  'Britain', 'Italia', 'India')
 
 
-# Line plot of time-series
-p <- ggplot(dfSm, aes(x=date)) + 
-  geom_line(aes(y=Sweden), color='#CD950C') + 
-  geom_point(aes(y=Sweden), color='#CD950C', size=0.5) + 
-  geom_line(aes(y=Denmark), color='#CD3333') + 
-  geom_point(aes(y=Denmark), color='#CD3333', size=0.5) +
-  geom_line(aes(y=Norway), color='#009ACD') + 
-  geom_point(aes(y=Norway), color='#009ACD', size=0.5) +
-  geom_point(aes(y=Britain), color='#8A360F', size=0.5) +
-  geom_line(aes(y=Britain), color='#8A360F') + 
-  geom_line(aes(y=Italia), color='#9BCD9B') + 
-  geom_point(aes(y=Italia), color='#9BCD9B', size=0.5) +
-  geom_line(aes(y=India), color='#EE7600') + 
-  geom_point(aes(y=India), color='#EE7600', size=0.5) +
-  labs(x='', y='New cases', color='legend') 
+# Line plot of smoothed time-series
+colors <- c('Sweden'='#CD950C', 'Norway'='#009ACD', 'Denmark'='#CD3333',
+            'Britain'='#8A360F', 'Italia'='#9BCD9B', 'India'='#EE7600')
+
+p <- ggplot(dfSm, aes(x=date)) +
+     geom_line(aes(y=Sweden, color='Sweden'), size=1.0) +
+     geom_point(aes(y=Sweden, color='Sweden'), size=0.5) + 
+     geom_line(aes(y=Norway, color='Norway'), size=1.0) + 
+     geom_point(aes(y=Norway, color='Norway'), size=0.5) + 
+     geom_line(aes(y=Denmark, color='Denmark'), size=1.0) +
+     geom_point(aes(y=Denmark, color='Denmark'), size=0.5) + 
+     geom_line(aes(y=Britain, color='Britain'), size=1.0) +
+     geom_point(aes(y=Britain, color='Britain'), size=0.5) + 
+     geom_line(aes(y=Italia, color='Italia'), size=1.0) + 
+     geom_point(aes(y=Italia, color='Italia'), size=0.5) + 
+     geom_line(aes(y=India, color='India'), size=1.0) +
+     geom_point(aes(y=India, color='India'), size=0.5) + 
+     labs(x='Date', y='New cases', color='Country') +
+     scale_color_manual(values=colors)
 p
 
 

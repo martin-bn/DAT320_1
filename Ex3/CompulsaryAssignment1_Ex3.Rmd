@@ -107,7 +107,7 @@ which(is.na(df))
 ```
 
 
-```{r Distribution}
+```{r Distribution, out.width='70%', out.height='70%'}
 
 # Boxplot of distribution for each country
 boxdf <- select(df, Sweden, Denmark, Norway, Britain, Italia, India)
@@ -118,7 +118,7 @@ boxplot(stacked_df$values ~ stacked_df$ind,
 ```
 
 
-```{r Line plots}
+```{r Line plots, out.width='50%', out.height='50%'}
 
 # Line plot for the countries separately
 # Sweden
@@ -143,10 +143,10 @@ p <- ggplot(df, aes(x=Date, y=Norway)) +
 p
 
 # Great Britain
-p <- ggplot(df, aes(x=Date, y=Norway)) +
+p <- ggplot(df, aes(x=Date, y=Britain)) +
   geom_line() +
   geom_point() + 
-  labs(x='', y='New cases', title='Norway')
+  labs(x='', y='New cases', title='Britain')
 p
 
 # Italia
@@ -198,7 +198,7 @@ also in the line plot.
 
 ### Task B
 
-```{r Correlation}
+```{r Correlation, out.width='70%', out.height='70%'}
 
 # Pairwise correlation
 dfCorr <- select(df, Sweden, Denmark, Norway, Britain, Italia, India)
@@ -215,7 +215,7 @@ The value for the correlation coefficient between Norway and Italia is
 0.429, and is above 0.6 for the other countries mentioned.
 Sweden show relatively low correlation with the other countries. India is negatively correlated with the other countries, except from Sweden.
 
-```{r Auto-correlation}
+```{r Auto-correlation, out.width='60%', out.height='60%'}
 
 # Producing plots for each of the countries
 acf(df$Sweden)
@@ -239,7 +239,7 @@ but with much lower correlation for the other days.
 Sweden also show negative values for the correlation coefficient. 
 
 
-```{r Cross-correlation}
+```{r Cross-correlation, out.width='60%', out.height='60%'}
 
 # Producing plots between the different countries
 
@@ -303,7 +303,7 @@ days lag.
 
 ### Task C
 
-```{r Principal Component Analysis}
+```{r Principal Component Analysis, out.width='70%', out.height='70%'}
 
 # Copy of dataframe
 dfT <- df
@@ -364,23 +364,32 @@ responsible for almost all the variance in the second component.
 
 ```{r Smoothing, warning=FALSE}
 
-# Rolling mean with different value for the kernel size
+# Rolling mean with different values for the kernel size
 swe1 <- zoo::rollmean(df$Sweden, k=3, fill=NA)
-swe2 <- zoo::rollmean(df$Sweden, k=7, fill=NA)
+swe2 <- zoo::rollmean(df$Sweden, k=10, fill=NA)
 swe3 <- zoo::rollmean(df$Sweden, k=30, fill=NA)
-dfSweden <- data.frame(date, swe1, swe2, swe3)
+swe4 <- zoo::rollmean(df$Sweden, k=60, fill=NA)
+swe5 <- zoo::rollmean(df$Sweden, k=100, fill=NA)
+dfSweden <- data.frame(date, swe1, swe2, swe3, swe4, swe5)
 
 
 # Line plot of smoothing with different value for the kernel size
-p <- ggplot(dfSweden, aes(x=date)) + 
-  geom_line(aes(y=swe1), color='#CD950C') + 
-  geom_point(aes(y=swe1), color='#CD950C', size=0.5) + 
-  geom_line(aes(y=swe2), color='#009ACD') + 
-  geom_point(aes(y=swe2), color='#009ACD', size=0.5) +
-  geom_point(aes(y=swe3), color='#8A360F', size=0.5) +
-  geom_line(aes(y=swe3), color='#8A360F') + 
-  labs(x='', y='New cases', color='legend') 
-p
+colors <- c('k=3'='#CD950C', 'k=10'='#009ACD', 'k=30'='#8A360F',
+            'k=60'='#CD3333', 'k=100'='#EE7600')
+
+ggplot(dfSweden, aes(x=date)) +
+  geom_line(aes(y=swe1, color='k=3'), size=1.0) +
+  geom_point(aes(y=swe1, color='k=3'), size=0.5) +
+  geom_line(aes(y=swe2, color='k=10'), size=1.0) + 
+  geom_point(aes(y=swe2, color='k=10'), size=0.5) +
+  geom_line(aes(y=swe3, color='k=30'), size=1.0) +
+  geom_point(aes(y=swe3, color='k=30'), size=0.5) +
+  geom_line(aes(y=swe4, color='k=60'), size=1.0) +
+  geom_point(aes(y=swe4, color='k=60'), size=0.5) +
+  geom_line(aes(y=swe5, color='k=100'), size=1.0) +
+  geom_point(aes(y=swe5, color='k=100'), size=0.5) +
+  labs(x='Date', y='New cases', color='Kernel size') +
+  scale_color_manual(values=colors)
 
 ```
 
@@ -388,7 +397,7 @@ p
 
 date <- df$Date
 dfS <- select(df, Sweden, Denmark, Britain, Norway, Italia, India)
-dfS <- zoo::rollmean(dfS, k=7, fill=NA)
+dfS <- zoo::rollmean(dfS, k=60, fill=NA)
 
 # New data.frame
 dfSm <- data.frame(date, dfS[,'Sweden'], dfS[,'Denmark'],
@@ -403,26 +412,30 @@ names(dfSm) <- c('Date', 'Sweden', 'Denmark', 'Norway',
 
 ```{r Line plot of smoothed values, warning=FALSE}
 
-p <- ggplot(dfSm, aes(x=date)) + 
-  geom_line(aes(y=Sweden), color='#CD950C') + 
-  geom_point(aes(y=Sweden), color='#CD950C', size=0.5) + 
-  geom_line(aes(y=Denmark), color='#CD3333') + 
-  geom_point(aes(y=Denmark), color='#CD3333', size=0.5) +
-  geom_line(aes(y=Norway), color='#009ACD') + 
-  geom_point(aes(y=Norway), color='#009ACD', size=0.5) +
-  geom_point(aes(y=Britain), color='#8A360F', size=0.5) +
-  geom_line(aes(y=Britain), color='#8A360F') + 
-  geom_line(aes(y=Italia), color='#9BCD9B') + 
-  geom_point(aes(y=Italia), color='#9BCD9B', size=0.5) +
-  geom_line(aes(y=India), color='#EE7600') + 
-  geom_point(aes(y=India), color='#EE7600', size=0.5) +
-  labs(x='', y='New cases', color='legend') 
+colors <- c('Sweden'='#CD950C', 'Norway'='#009ACD', 'Denmark'='#CD3333',
+            'Britain'='#8A360F', 'Italia'='#9BCD9B', 'India'='#EE7600')
+
+p <- ggplot(dfSm, aes(x=date)) +
+     geom_line(aes(y=Sweden, color='Sweden'), size=1.0) +
+     geom_point(aes(y=Sweden, color='Sweden'), size=0.5) + 
+     geom_line(aes(y=Norway, color='Norway'), size=1.0) + 
+     geom_point(aes(y=Norway, color='Norway'), size=0.5) + 
+     geom_line(aes(y=Denmark, color='Denmark'), size=1.0) +
+     geom_point(aes(y=Denmark, color='Denmark'), size=0.5) + 
+     geom_line(aes(y=Britain, color='Britain'), size=1.0) +
+     geom_point(aes(y=Britain, color='Britain'), size=0.5) + 
+     geom_line(aes(y=Italia, color='Italia'), size=1.0) + 
+     geom_point(aes(y=Italia, color='Italia'), size=0.5) + 
+     geom_line(aes(y=India, color='India'), size=1.0) +
+     geom_point(aes(y=India, color='India'), size=0.5) + 
+     labs(x='Date', y='New cases', color='Country') +
+     scale_color_manual(values=colors)
 p
 
 ```
 
 
-```{r PCA on smoothed series}
+```{r PCA on smoothed series, out.width='70%', out.height='70%'}
 
 # Copy of dataframe
 dfT <- dfSm
@@ -472,11 +485,14 @@ fviz_pca_biplot(df.pca, repel = FALSE,
 
 Different sizes for the kernel was tested for smoothing the series, with
 the example shown for Sweden. k=3 showed to be too low to filter away
-the measurements that were set to 0, so k=7 was chosen as the kernel size.
+the measurements that were set to 0 and a kernel size of 100 could result in
+smoothing the curve to much. Choosing a kernel size of 30 or 60 
+seamed to be appropriate. 
 Smoothing the entire series and looking at the line plot for the smoothed 
-series, showed that k=7 also filtered away the negative values.
+series, showed that a kernel size of 7 or higher also filtered 
+away the negative values.
 When performing the principal component analysis, the variance explained by
-the first component increased to over 70%. The differences between the 
-previously similar countries Denmark, Norway, Great Britain and 
-Italia increased when performing pca on the smoothed series, 
-and the difference between Sweden and Italia decreased. 
+the first component decreased some, but the differences between the countries
+became smaller, except for India.
+
+
