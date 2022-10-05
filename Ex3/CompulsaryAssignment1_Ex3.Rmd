@@ -1,0 +1,482 @@
+---
+title: "Comulsary Assignment 1"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+date: "2022-09-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercise 3 (Transformations)
+
+
+```{r Packages, message=FALSE}
+
+# Loading necessary packages
+library('readr')
+library('dplyr')
+library('ggplot2')
+library('tidyverse')
+library('lubridate')
+library('zoo')
+library('reshape2')
+library('factoextra')
+
+```
+
+### Task A
+
+```{r Data, message=FALSE}
+
+# Loading data
+covid <- read_csv("data/covid.csv")
+# View(covid)
+# str(covid)
+
+# Selecting time-window 
+covid <- covid[covid$date >= "2020-03-16" & covid$date <= "2022-01-01", ] 
+
+# Selecting countries
+countries <- c('SWE', 'DNK', 'NOR', 'GBR', 'ITA', 'IND')
+covid <- covid[covid$iso_code %in% countries,]
+
+# Selecting columns
+covid <- select(covid, date, iso_code, new_cases_per_million)
+
+# Checking that date-column is in correct format
+class(covid$date)
+
+# Summary statistics of data.frame
+summary(covid)
+
+```
+
+
+```{r Data.frame, echo=FALSE}
+
+# Reshaping data.frame
+date <- covid$date
+date <- date[!duplicated(date)]
+
+swe <- covid[covid$iso_code == 'SWE', ]
+swe <- select(swe, new_cases_per_million)
+dnk <- covid[covid$iso_code == 'DNK', ]
+dnk <- select(dnk, new_cases_per_million)
+nor <- covid[covid$iso_code == 'NOR', ]
+nor <- select(nor, new_cases_per_million)
+gbr <- covid[covid$iso_code == 'GBR', ]
+gbr <- select(gbr, new_cases_per_million)
+ita <- covid[covid$iso_code == 'ITA', ]
+ita <- select(ita, new_cases_per_million)
+ind <- covid[covid$iso_code == 'IND', ]
+ind <- select(ind, new_cases_per_million)
+
+df <- data.frame(date, swe, dnk, nor, gbr, ita, ind)
+
+# Renaming data.frame
+names(df) <- c('Date', 'Sweden', 'Denmark', 'Norway', 
+               'Britain', 'Italia', 'India')
+
+
+```
+
+
+### Exploratory analysis
+
+#### Dimensionality and time-index
+
+After restricting the dataset, the series is a univariate time series with 
+only one variable that is varying over time and a single object measured. 
+The time domain is selected to be from 16.03.2020 to 01.01.2022.
+There is one measurement each day, so the resolution is daily 
+and the time step is one day. 
+
+
+```{r Summary statistics}
+
+# Summary statistics
+summary(df)
+
+# Missing values
+which(is.na(df))
+
+```
+
+
+```{r Distribution}
+
+# Boxplot of distribution for each country
+boxdf <- select(df, Sweden, Denmark, Norway, Britain, Italia, India)
+stacked_df <- stack(boxdf)
+boxplot(stacked_df$values ~ stacked_df$ind,
+        col = rainbow(ncol(df)), xlab='', ylab='New cases')
+
+```
+
+
+```{r Line plots}
+
+# Line plot for the countries separately
+# Sweden
+p <- ggplot(df, aes(x=Date, y=Sweden)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Sweden')
+p
+
+# Denmark
+p <- ggplot(df, aes(x=Date, y=Denmark)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Denmark')
+p
+
+# Norway
+p <- ggplot(df, aes(x=Date, y=Norway)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Norway')
+p
+
+# Great Britain
+p <- ggplot(df, aes(x=Date, y=Norway)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Norway')
+p
+
+# Italia
+p <- ggplot(df, aes(x=Date, y=Italia)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Italia')
+p
+
+# India
+p <- ggplot(df, aes(x=Date, y=India)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='India')
+p
+
+
+```
+```{r Line plot}
+
+# Reshaping the original data.frame
+covid_cases <- melt(covid, id.vars=c('iso_code', 'date'),
+                    value.name='Value')
+
+# Line plot containing all the countries
+covid_plot <- ggplot(data=covid_cases, aes(x=date,
+                                           y=Value, 
+                                           group=iso_code,
+                                           colour=iso_code)) +
+  geom_line() +
+  geom_point(size=0.5) + 
+  labs(y='New cases', x='')
+covid_plot + ggtitle('Daily cases for each country')
+
+
+```
+
+
+#### Comments to Task A
+
+The time-series contains no missing values for either of the countries.
+Since Sweden did not test for covid every day, 
+the time series for this country contains many values that are 0.
+Denmark, Great Britain and India have some entries that are
+below 0. This can be seen from the minimum value in the summary statistics and
+also in the line plot.
+
+
+
+### Task B
+
+```{r Correlation}
+
+# Pairwise correlation
+dfCorr <- select(df, Sweden, Denmark, Norway, Britain, Italia, India)
+corr <- cor(dfCorr, method='pearson')
+round(corr, 3)
+heatmap(corr)
+
+
+```
+
+From the correlation matrix it can be seen that Denmark, Norway, Great Britain 
+and Italia show high, positive correlation with each other. 
+The value for the correlation coefficient between Norway and Italia is 
+0.429, and is above 0.6 for the other countries mentioned.
+Sweden show relatively low correlation with the other countries. India is negatively correlated with the other countries, except from Sweden.
+
+```{r Auto-correlation}
+
+# Producing plots for each of the countries
+acf(df$Sweden)
+# acf(df$Denmark)
+# acf(df$Norway)
+# acf(df$Britain)
+# acf(df$Italia)
+# acf(df$India)
+
+```
+
+
+Looking at the auto-correlation for each country, Denmark, Norway, Great Britain
+and India shows a slowly decreasing correlation as the lag increases.
+All the mentioned countries show some cyclical behavior in the correlation,
+with the differences between peaks of 7 days. 
+India only shows a slowly decreasing correlation as the lag increases, but 
+over the line for significant correlation for all the lags visualized. 
+Sweden also show 7-days cycles with highest correlation at the peaks, 
+but with much lower correlation for the other days. 
+Sweden also show negative values for the correlation coefficient. 
+
+
+```{r Cross-correlation}
+
+# Producing plots between the different countries
+
+"
+# Sweden
+ccf(df$Sweden, df$Denmark)
+ccf(df$Sweden, df$Norway)
+ccf(df$Sweden, df$Britain)
+ccf(df$Sweden, df$Italia)
+ccf(df$Sweden, df$India)
+
+# Denmark
+ccf(df$Denmark, df$Norway)
+ccf(df$Denmark, df$Britain)
+ccf(df$Denmark, df$Italia)
+ccf(df$Denmark, df$India)
+
+# Norway
+ccf(df$Norway, df$Denmark)
+ccf(df$Norway, df$Britain)
+ccf(df$Norway, df$Italia)
+ccf(df$Norway, df$India)
+
+# Britain
+ccf(df$Britain, df$Denmark)
+ccf(df$Britain, df$Norway)
+ccf(df$Britain, df$Italia)
+ccf(df$Britain, df$India)
+
+# Italia
+ccf(df$Italia, df$Denmark)
+ccf(df$Italia, df$Norway)
+ccf(df$Italia, df$Britain)
+ccf(df$Italia, df$India)
+
+# India
+ccf(df$India, df$Denmark)
+ccf(df$India, df$Norway)
+ccf(df$India, df$Britain)
+" 
+ccf(df$India, df$Italia)
+
+```
+
+
+Denmark, Norway, Great Britain and Italia show statistically significant
+positive correlation for the entire period visualized; -25 to +25 days lag.
+Sweden show cyclical behavior in the cross-correlation with the other 
+countries, with variation in the coefficient values, but mostly positive. 
+India show positive values for the cross-correlation coefficient with Sweden
+and both negative and positive values for the coefficient with Italia. For the
+other countries, India shows negative cross-correlation for the entire
+period visualized, and mostly significantly high values. 
+The plot for the cross-correlation between India and Italia is shown as an 
+example. The cross-correlation is significantly negative up until a lag of 
+-8 days. The value for the coefficient increases, turn positive at a lag
+of 3 days and the times series becomes significantly correlated after 13 
+days lag. 
+
+
+
+### Task C
+
+```{r Principal Component Analysis}
+
+# Copy of dataframe
+dfT <- df
+
+# Setting date as index
+rownames(dfT) <- dfT$Date
+dfT <- select(dfT, Sweden, Denmark, Norway, Britain, Italia, India)
+
+# Remove missing values (even though there should not be any)
+dfT <- na.omit(dfT)
+
+# PCA transform
+df.pca <- princomp(dfT, scale=TRUE)
+
+# Scores and loadings
+# df.pca$scores
+# df.pca$loadings
+
+# Summary and plot
+# plot(df.pca)
+# biplot(df.pca)
+summary(df.pca)
+
+# Explained variance
+fviz_eig(df.pca)
+
+# Plot of scores
+fviz_pca_ind(df.pca,
+             col.ind = 'cos2', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = FALSE  
+)
+
+# Plot of loadings
+fviz_pca_var(df.pca,
+             col.var = 'contrib', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = TRUE   
+)
+
+# Biplot
+fviz_pca_biplot(df.pca, repel = FALSE,
+                col.var = '#1874CD', 
+                col.ind = '#66CDAA'  
+)
+```
+The principal components analysis shows that over 50% of the variance in the
+data can be explained by the first principal component. 
+The plot of the loadings show that Denmark, Norway, Great Britain and Italy are correlated as they lie in the same direction in along the axis for the first principal component. Denmark is contributing to most of the variance 
+in the first principal component. 
+India contributes to a very small amount of the variance in the dataset. 
+Sweden can be considered different compared to the other countries and is 
+responsible for almost all the variance in the second component. 
+
+
+
+### Task D
+
+```{r Smoothing, warning=FALSE}
+
+# Rolling mean with different value for the kernel size
+swe1 <- zoo::rollmean(df$Sweden, k=3, fill=NA)
+swe2 <- zoo::rollmean(df$Sweden, k=7, fill=NA)
+swe3 <- zoo::rollmean(df$Sweden, k=30, fill=NA)
+dfSweden <- data.frame(date, swe1, swe2, swe3)
+
+
+# Line plot of smoothing with different value for the kernel size
+p <- ggplot(dfSweden, aes(x=date)) + 
+  geom_line(aes(y=swe1), color='#CD950C') + 
+  geom_point(aes(y=swe1), color='#CD950C', size=0.5) + 
+  geom_line(aes(y=swe2), color='#009ACD') + 
+  geom_point(aes(y=swe2), color='#009ACD', size=0.5) +
+  geom_point(aes(y=swe3), color='#8A360F', size=0.5) +
+  geom_line(aes(y=swe3), color='#8A360F') + 
+  labs(x='', y='New cases', color='legend') 
+p
+
+```
+
+```{r Smoothing entire time series}
+
+date <- df$Date
+dfS <- select(df, Sweden, Denmark, Britain, Norway, Italia, India)
+dfS <- zoo::rollmean(dfS, k=7, fill=NA)
+
+# New data.frame
+dfSm <- data.frame(date, dfS[,'Sweden'], dfS[,'Denmark'],
+                   dfS[,'Norway'], dfS[,'Britain'], 
+                   dfS[,'Italia'], dfS[,'India'])
+# Renaming data.frame
+names(dfSm) <- c('Date', 'Sweden', 'Denmark', 'Norway',
+                 'Britain', 'Italia', 'India')
+
+```
+
+
+```{r Line plot of smoothed values, warning=FALSE}
+
+p <- ggplot(dfSm, aes(x=date)) + 
+  geom_line(aes(y=Sweden), color='#CD950C') + 
+  geom_point(aes(y=Sweden), color='#CD950C', size=0.5) + 
+  geom_line(aes(y=Denmark), color='#CD3333') + 
+  geom_point(aes(y=Denmark), color='#CD3333', size=0.5) +
+  geom_line(aes(y=Norway), color='#009ACD') + 
+  geom_point(aes(y=Norway), color='#009ACD', size=0.5) +
+  geom_point(aes(y=Britain), color='#8A360F', size=0.5) +
+  geom_line(aes(y=Britain), color='#8A360F') + 
+  geom_line(aes(y=Italia), color='#9BCD9B') + 
+  geom_point(aes(y=Italia), color='#9BCD9B', size=0.5) +
+  geom_line(aes(y=India), color='#EE7600') + 
+  geom_point(aes(y=India), color='#EE7600', size=0.5) +
+  labs(x='', y='New cases', color='legend') 
+p
+
+```
+
+
+```{r PCA on smoothed series}
+
+# Copy of dataframe
+dfT <- dfSm
+# Setting date as index
+rownames(dfT) <- dfT$Date
+dfT <- select(dfT, Sweden, Denmark, Norway, Britain, Italia, India)
+
+# Remove missing values
+dfT <- na.omit(dfT)
+
+# PCA transform
+df.pca <- princomp(dfT, scale=TRUE)
+
+# Scores and loadings
+# df.pca$scores
+# df.pca$loadings
+
+# Summary and plot
+# plot(df.pca)
+# biplot(df.pca)
+summary(df.pca)
+
+# Explained variance
+fviz_eig(df.pca)
+
+# Plot of scores
+fviz_pca_ind(df.pca,
+             col.ind = 'cos2', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = FALSE  
+)
+
+# Plot of loadings
+fviz_pca_var(df.pca,
+             col.var = 'contrib', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = TRUE   
+)
+
+# Biplot
+fviz_pca_biplot(df.pca, repel = FALSE,
+                col.var = '#1874CD', 
+                col.ind = '#66CDAA'  
+)
+
+```
+
+Different sizes for the kernel was tested for smoothing the series, with
+the example shown for Sweden. k=3 showed to be too low to filter away
+the measurements that were set to 0, so k=7 was chosen as the kernel size.
+Smoothing the entire series and looking at the line plot for the smoothed 
+series, showed that k=7 also filtered away the negative values.
+When performing the principal component analysis, the variance explained by
+the first component increased to over 70%. The differences between the 
+previously similar countries Denmark, Norway, Great Britain and 
+Italia increased when performing pca on the smoothed series, 
+and the difference between Sweden and Italia decreased. 
