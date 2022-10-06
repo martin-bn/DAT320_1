@@ -182,13 +182,14 @@ covid_plot + ggtitle('Daily cases for each country')
 
 
 After restricting the dataset to the specified column, the series is a 
-univariate time series with only one variable that is varying over. The time domain is selected to be from 16.03.2020 to 01.01.2022. 
+univariate time series with only one variable that is varying over. 
+The time domain is selected to be from 16.03.2020 to 01.01.2022. 
 There is one measurement each day, so the time series has daily resolution.
+
 The dataset looks complete, since either of the countries had missing values 
-for the measurement of new cases. However, since Sweden did not test for covid every day, the series for this 
-country contains many values that are 0. Denmark, Great Britain and India have some entries that are below 0. This can be seen from the minimum value in the summary statistics and also in the line plot.
-
-
+for the measurement of new cases. However, since Sweden did not test for covid every day, the series for this country contains many values that are 0. 
+Denmark, Great Britain and India have some entries that are below 0. 
+This can be seen from the minimum value in the summary statistics and also in the line plot.
 
 
 
@@ -258,7 +259,8 @@ From the correlation matrix it can be seen that Denmark, Norway, Great Britain
 and Italia show high, positive correlation with each other. 
 The value for the correlation coefficient between Norway and Italia is 
 0.429 and above 0.6 for the other countries mentioned.
-Sweden show relatively low correlation with the other countries. India is negatively correlated with the other countries, except from Sweden.
+Sweden show relatively low correlation with the other countries. 
+India is negatively correlated with the other countries, except from Sweden.
 
 Looking at the autocorrelation plots for each country; all the countries, 
 except Sweden, have spikes above the line for being statistically significant. 
@@ -281,7 +283,7 @@ period visualized, and mostly significantly low values.
 
 
 
-### Task C
+### Task C: Principal Component Analysis
 
 ```{r Principal Component Analysis, out.width='70%', out.height='70%'}
 
@@ -330,9 +332,15 @@ fviz_pca_biplot(df.pca, repel = FALSE,
                 col.ind = '#66CDAA'  
 )
 ```
+### Comments to Task C
+
+###
+
 The principal components analysis shows that over 50% of the variance in the
 data can be explained by the first principal component. 
-The plot of the loadings show that Denmark, Norway, Great Britain and Italy are correlated as they lie in the same direction in along the axis for the first principal component. Denmark is contributing to most of the variance 
+The plot of the loadings show that Denmark, Norway, Great Britain and Italy are correlated,
+as they lie in the same direction in along the axis for the first principal component. 
+Denmark is contributing to most of the variance 
 in the first principal component. 
 India contributes to a very small amount of the variance in the dataset. 
 Sweden can be considered different compared to the other countries and is 
@@ -340,7 +348,7 @@ responsible for almost all the variance in the second component.
 
 
 
-### Task D
+### Task D: Smoothing
 
 ```{r Smoothing, warning=FALSE}
 
@@ -462,7 +470,9 @@ fviz_pca_biplot(df.pca, repel = FALSE,
 )
 
 ```
+### Comments to Task D
 
+### 
 Different sizes for the kernel was tested for smoothing the series, with
 the example shown for Sweden. k=3 showed to be too low to filter away
 the measurements that were set to 0 and a kernel size of 100 could result in
