@@ -1,0 +1,876 @@
+---
+title: "Compulsary assignment 1"
+author: "Group12"
+date: "2022-10-06"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  message = FALSE, warning=FALSE)
+```
+
+## Exercise 1
+
+# a)
+```{r Load ozone data, message = FALSE}
+# Load the data
+library(readr)
+ozone <- read_csv("/Users/martinbergsholmnesse/Documents/NMBU/DAT320/ozone.csv")
+```
+
+
+```{r Column names ozone}
+
+# Delete columns
+ozone = subset(ozone, select = -c(WSR_PK, WSR_AV, T_PK, T_AV, T85, RH85, U85, V85, 
+                                  HT85, T70, RH70, U70, V70, HT70, T50, RH50, U50, 
+                                  V50, HT50, KI, TT, SLP, SLP_, Precp, response))
+```
+
+```{r Convert ozone to date-format, results=FALSE}
+# Convert Date to Dato-format
+library(dplyr)
+library(magrittr)
+mutate(ozone, Date= as.Date(Date, format= "%d.%m.%Y"))
+```
+
+
+
+```{r Plot T.0}
+# # Plot T.0 
+library(ggplot2)
+
+ggplot(data = ozone ,
+       aes(x = Date , y =
+             T.0)) + geom_point()
+```
+We see that the average temperature between 00:00 and 00:59 varies from a few negative degrees to over 30. There are clearly seasonal changes in the temperature. It does not seem to be a trend in the temperature.
+
+```{r Plot WSR.0}
+# Plot WSR.0
+ggplot(data = ozone ,
+       aes(x = Date , y =
+             WSR.0)) + geom_point()
+```
+Also in the wind speed we see some seasonality. The yearly seasonality is not quite as distinct as it was with the temperature. In the wind speed plot we see that the peaks usually appear in the beginning of the year, but in the temperature plot the peaks are of course in the summer. As with the temperature, it is no clear trend in the data.
+
+
+
+# b)
+```{r missing values}
+# Missing values
+sum(is.na(ozone))
+```
+
+The number of missing values is 11458.
+
+
+
+```{r Add dates}
+library(tidyr)
+
+ozone = ozone %>%
+  mutate(Date = as.Date(Date)) %>%
+  complete(Date = seq.Date(min(Date), max(Date), by="day"))
+
+```
+
+```{r leap year}
+# Remove leap year dates
+ozone = ozone[!(format(ozone$Date,"%m") == "02" & format(ozone$Date, "%d") == "29"),
+              ,drop = FALSE]
+
+# Check if number of rows is correct. It is.
+nrow(ozone)
+```
+We see that the number of observations are now 2555, which means that we successfully removed the leap year dates. 2555 / 365 = 7.
+
+
+# c)
+
+```{r Wide to long}
+ozone = as.data.frame(ozone)
+
+ozone_long = reshape(ozone, varying = list(grepl(colnames(ozone), pattern = "T"),
+                              grepl(colnames(ozone), pattern = "WSR")), 
+        direction = "long",
+        v.names = c("T", "WSR"),
+        timevar = "Time",
+        times = 0:23) %>%
+  arrange(Date, Time)
+
+library(lubridate)
+
+ozone_long = mutate(ozone_long, DateTime = ymd_h(paste(Date, Time)))
+
+head(ozone_long)
+```
+We see that the data is converted from wide to long format.
+
+
+
+```{r Yearly average temperatures}
+# Yearly average temperatures
+yat = ozone_long %>%
+  group_by(year(Date)) %>%
+  summarize(mean_temp = mean(T, na.rm = TRUE),
+            sd_temp = sd(T, na.rm = TRUE))
+
+
+# Sett som data frame
+yat = as.data.frame(yat)
+
+# Endre navnet til noe som ikke inkluderer den
+# innebygde funksjonen "year"...
+names(yat)[names(yat) == 'year(Date)'] <- 'Year'
+
+# Sjekk at navn er endret
+colnames(yat)
+
+# Plot of average temperature and standard deviation
+
+ggplot(data = yat,
+       mapping = aes(x = Year , 
+                     y = mean_temp)) +
+  geom_errorbar(aes(ymin = mean_temp - sd_temp,
+                    ymax = mean_temp + sd_temp)) +
+  geom_line()
+
+```
+
+The yearly average temperature reached a minimum level in 2002.
+
+```{r Yearly median wind}
+# Yearly median wind
+ymw = ozone_long %>%
+  group_by(year(Date)) %>%
+  summarize(median_WSR = median(WSR, na.rm = TRUE),
+            max_wind = max(WSR, na.rm = TRUE),
+            min_wind = min(WSR, na.rm = TRUE))
+
+# Sett som data frame
+ymw = as.data.frame(ymw)
+
+# Endre navnet til noe som ikke inkluderer den
+# innebygde funksjonen "year"...
+names(ymw)[names(ymw) == 'year(Date)'] <- 'Year'
+
+# Sjekk at navn er endret
+colnames(ymw)
+
+# Plot it!
+ggplot(ymw, aes(x=Year)) + 
+  geom_line(aes(y = median_WSR), color = "darkred") + 
+  geom_line(aes(y = max_wind), color="steelblue", linetype="twodash")
+```
+The dotted line is the maximum wind speed and the red line below is the mean wind speed. The minimum wind speed is zero for all the years.
+
+
+## Exercise 2
+
+# a)
+```{r Load temperature data}
+data <- read_csv("/Users/martinbergsholmnesse/Documents/NMBU/DAT320/temperature.csv")
+
+#install.packages("naniar")
+library(naniar)
+vis_miss(data)
+# The plot shows the placement of missing values.
+# - total 701 NA values
+# - longest list of consecutive NA are 401
+```
+
+The plot shows the placement of missing values.
+Total 701 NA values
+Longest list of consecutive NA are 401
+
+
+```{r Print NAs ozone}
+sum_of_na = sum(is.na(data$T.missing))
+list_consecutive_na = c(0)
+consecutive_na = 0
+for (i in 1:length(data[,1])) {
+  if (is.na(data[i, 3])) {
+    consecutive_na = consecutive_na + 1
+    if(!is.na(data[i + 1, 3])) {
+      list_consecutive_na = append(list_consecutive_na, c(consecutive_na))
+      consecutive_na = 0
+    }
+  } 
+}
+
+print(list_consecutive_na)
+```
+
+
+
+```{r Remove leap year temperature}
+# Remove type caste date remove 29 of february
+max(list_consecutive_na)
+library(lubridate)
+leap = function(x){
+  +   day(x) == 29 & month(x) == 2 
+}
+
+data$Date <- as.Date(data$Date)
+data = data[!leap(data$Date), ]
+
+```
+
+# b)
+
+
+```{r Replace and plot missing values temperature}
+
+# (B)
+# Impute missing values by local and global mean.
+
+library(imputeTS)
+library(dplyr)
+gobal_solution_data <- data
+gobal_solution_data$T.missing <- na_mean(gobal_solution_data$T.missing)
+
+locf_solution_data <- data
+locf_solution_data$T.missing <- na_locf(locf_solution_data$T.missing)
+vis_miss(locf_solution_data)
+
+colnames(data)
+
+
+library(ggplot2)
+library(patchwork)
+p1 <- ggplot(gobal_solution_data, aes(x=Date,
+                                      y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+
+p2 <- ggplot(locf_solution_data, aes(x=Date,
+                                     y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+p1 / p2
+
+
+
+
+```
+
+
+
+```{r Visualization temperature}
+# RMSE
+# By visualization and MSE we can see that local replacement is more acurate then global.
+global_MSE <- mean((gobal_solution_data$T.full - gobal_solution_data$T.missing)^2)
+locf_MSE <- mean((locf_solution_data$T.full - locf_solution_data$T.missing)^2)
+
+global_MSE
+locf_MSE
+```
+
+# (C):
+
+There are some clear problem when we interpolation the larger group of values.
+1. most of the methods are noe suited to cover longer segments of missing values.
+2. spline is prone to error caused by the direction from the two segments which 
+we try to connect. Therefor spline perform the worst.
+
+Result:
+By comparing plots and MSE there are one solution that perform as we want, and that is
+seasonal imputation by the function: na_seasplit. by trial and error we find out that 
+the function is not suited to find the right seasonality, this can be fixed by 
+transforming the feature vector into a time series object and specify the right 
+FQ for the series.
+
+
+```{r Linear imputation  temperature}
+library(imputeTS)
+
+# Linear imputation 
+LI_data <- data
+LI_data$T.missing <- na_interpolation(LI_data$T.missing, option = "linear")
+
+p1 <- ggplot(LI_data, aes(x=Date,
+                          y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+
+linear_MSE <- mean((LI_data$T.full - LI_data$T.missing)^2)
+linear_MSE
+```
+
+```{r Spinel imputation temperature}
+# Spinel imputation
+
+SPINEL_data <- data
+SPINEL_data$T.missing <- na_interpolation(SPINEL_data$T.missing, option = "spline")
+
+p2 <- ggplot(SPINEL_data, aes(x=Date,
+                              y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+
+SPINEL_MSE <- mean((SPINEL_data$T.full - SPINEL_data$T.missing)^2)
+SPINEL_MSE
+
+```
+
+
+```{r Stine imputation temperature}
+# Stine imputation
+Stine_data <- data
+Stine_data$T.missing <- na_interpolation(Stine_data$T.missing, option = "stine")
+
+p3<- ggplot(Stine_data, aes(x=Date,
+                            y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+
+STINE_MSE <- mean((Stine_data$T.full - Stine_data$T.missing)^2)
+STINE_MSE
+
+```
+
+
+```{r kalman temperature}
+# kalman
+kalman_data <- data
+kalman_data$T.missing <- na_kalman(kalman_data$T.missing)
+
+p4 <- ggplot(kalman_data, aes(x=Date, y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+
+KALMAN_MSE <- mean((kalman_data$T.full - kalman_data$T.missing)^2)
+KALMAN_MSE
+```
+
+
+```{r seasplit interpolation temperature}
+# seasplit interpolation
+seasplit_data <- data
+seasplit_data$T.missing <- ts(seasplit_data$T.missing, start=2012, frequency = 365)
+seasplit_data$T.missing <- na_seasplit(seasplit_data$T.missing,
+                                       algorithm = "interpolation",
+                                       find_frequency = FALSE)
+
+p5 <- ggplot(seasplit_data,
+             aes(x=Date, y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5)
+
+SEASSPLIT_MSE <- mean((seasplit_data$T.full - seasplit_data$T.missing)^2)
+SEASSPLIT_MSE
+
+p1 / p2 / p3 /p4 /p5
+```
+
+
+# d)
+
+```{r Decompose temperature}
+manuel_data <- data
+
+manuel_data$month <- as.integer(format(manuel_data$Date, "%m"))
+manuel_data$day <- as.integer(format(manuel_data$Date, "%d"))
+
+for (val in 1:31)
+{
+  for (val2 in 1:12)
+  {
+    manuel_data$T.missing[manuel_data$day == val & manuel_data$month == val2] <- na_mean(manuel_data$T.missing[manuel_data$day == val & manuel_data$month == val2])
+  }
+}
+
+p_manuel <- ggplot(manuel_data, aes(x=Date, y=T.missing)) +
+  geom_line(color="purple", alpha=0.5) +
+  geom_line(aes(x=Date, y=T.full), alpha=0.5) 
+p_manuel
+
+manuel_MSE <- mean((manuel_data$T.full - manuel_data$T.missing)^2)
+manuel_MSE
+
+
+maunel.full.stl.w5 <- stl(ts(manuel_data$T.full, frequency = 365),
+                          s.window = 5)
+plot(maunel.full.stl.w5)
+
+maunel.full.stl.wp <- stl(ts(manuel_data$T.full, frequency = 365),
+                          s.window = "periodic")
+plot(maunel.full.stl.wp)
+
+maunel.missing.stl.w5 <- stl(ts(manuel_data$T.missing, frequency = 365),
+                             s.window = 5)
+plot(maunel.full.stl.w5)
+
+maunel.missing.stl.wp <- stl(ts(manuel_data$T.missing, frequency = 365),
+                             s.window = "periodic")
+plot(maunel.missing.stl.wp)
+```
+
+
+```{r decompoed temperature results}
+# Results
+# by compering na_seasplit and our implementation we can se that they both follow the 
+# the full data, but with some difference in error. 
+p5 / p_manuel
+
+# error between manuel and na_seasplit
+SEASSPLIT_MSE
+manuel_MSE
+diff_MSE <- SEASSPLIT_MSE - manuel_MSE
+diff_MSE
+```
+
+
+
+## Exercise 3
+
+# a)
+
+```{r Loading libraries Covid}
+# Loading libraries
+#-------------------------------------------------------------------------------
+library('readr')
+library('dplyr')
+library('ggplot2')
+library('tidyverse')
+library('lubridate')
+library('zoo')
+library('reshape2')
+library('devtools')
+library('factoextra')
+
+```
+
+```{r Load data covid}
+
+covid <- read_csv("/Users/martinbergsholmnesse/Documents/NMBU/DAT320/covid.csv")
+# View(covid)
+# str(covid)
+
+# Selecting time-window 
+covid <- covid[covid$date >= '2020-03-16' & covid$date <= '2022-01-01', ] 
+
+# Selecting countries and columns
+countries <- c('SWE', 'DNK', 'NOR', 'GBR', 'ITA', 'IND')
+covid <- covid[covid$iso_code %in% countries, c('date', 'iso_code', 'new_cases_per_million')]
+
+# Checking that date-column is in correct format
+class(covid$date)
+
+# Summary statistics of data.frame
+summary(covid)
+
+```
+
+
+```{r Reshaping data.frame covid}
+# Reshaping data.frame
+date <- covid$date
+date <- date[!duplicated(date)]
+
+swe <- covid[covid$iso_code == 'SWE', ]
+swe <- select(swe, new_cases_per_million)
+dnk <- covid[covid$iso_code == 'DNK', ]
+dnk <- select(dnk, new_cases_per_million)
+nor <- covid[covid$iso_code == 'NOR', ]
+nor <- select(nor, new_cases_per_million)
+gbr <- covid[covid$iso_code == 'GBR', ]
+gbr <- select(gbr, new_cases_per_million)
+ita <- covid[covid$iso_code == 'ITA', ]
+ita <- select(ita, new_cases_per_million)
+ind <- covid[covid$iso_code == 'IND', ]
+ind <- select(ind, new_cases_per_million)
+
+df <- data.frame(date, swe, dnk, nor, gbr, ita, ind)
+
+# Renaming data.frame
+names(df) <- c('Date', 'Sweden', 'Denmark', 'Norway', 
+               'Britain', 'Italia', 'India')
+```
+
+
+```{r Exploratory analysis covid}
+# Exploratory analysis
+# ------------------------------------------------------------------------------
+# Dimensionality
+nrow(df)
+ncol(df)
+dim(df)
+
+# Summary statistics
+summary(df)
+
+
+```
+
+
+```{r Plots covid}
+# Plots 
+# ------------------------------------------------------------------------------
+
+# Distribution
+boxdf <- select(df, Sweden, Denmark, Norway, Britain, Italia, India)
+stacked_df <- stack(boxdf)
+boxplot(stacked_df$values ~ stacked_df$ind,
+        col = rainbow(ncol(df)), xlab='', ylab='New cases')
+
+
+# Line plot for the countries separately
+# Sweden
+p <- ggplot(df, aes(x=Date, y=Sweden)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Sweden')
+p
+
+# Denmark
+p <- ggplot(df, aes(x=Date, y=Denmark)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Denmark')
+p
+
+# Norway
+p <- ggplot(df, aes(x=Date, y=Norway)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Norway')
+p
+
+# Great Britain
+p <- ggplot(df, aes(x=Date, y=Norway)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Norway')
+p
+
+# Italia
+p <- ggplot(df, aes(x=Date, y=Italia)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='Italia')
+p
+
+# India
+p <- ggplot(df, aes(x=Date, y=India)) +
+  geom_line() +
+  geom_point() + 
+  labs(x='', y='New cases', title='India')
+p
+
+
+# Line plot, all countries combined
+covid_cases <- melt(covid, id.vars=c('iso_code', 'date'),
+                    value.name='Value')
+
+covid_plot <- ggplot(data=covid_cases, aes(x=date,
+                                           y=Value, 
+                                           group=iso_code,
+                                           colour=iso_code)) +
+  geom_line() +
+  geom_point(size=0.5) + 
+  labs(y='New cases', x='')
+covid_plot + ggtitle('Daily cases for each country')
+
+covid_plot
+```
+
+After restricting the dataset to the specified column, the series is a 
+univariate time series with only one variable that is varying over. 
+The time domain is selected to be from 16.03.2020 to 01.01.2022. 
+There is one measurement each day, so the time series has daily resolution.
+
+The dataset looks complete, since either of the countries had missing values 
+for the measurement of new cases. However, since Sweden did not test for covid every day, the series for this country contains many values that are 0. 
+Denmark, Great Britain and India have some entries that are below 0. 
+This can be seen from the minimum value in the summary statistics and also in the line plot.
+
+# b)
+
+```{r Auto- and cross-correlation covid}
+ 
+# ------------------------------------------------------------------------------
+# Correlation-matrix
+dfCorr <- select(df, Sweden, Denmark, Norway, Britain, Italia, India)
+corr <- cor(dfCorr, method='pearson')
+round(corr, 3)
+heatmap(corr)
+
+# Autocorrelation
+acf(df$Sweden)
+acf(df$Denmark)
+acf(df$Norway)
+acf(df$Britain)
+acf(df$Italia)
+acf(df$India)
+
+# Cross-correlation
+# Sweden
+ccf(df$Sweden, df$Denmark)
+ccf(df$Sweden, df$Norway)
+ccf(df$Sweden, df$Britain)
+ccf(df$Sweden, df$Italia)
+ccf(df$Sweden, df$India)
+
+# Denmark
+ccf(df$Denmark, df$Norway)
+ccf(df$Denmark, df$Britain)
+ccf(df$Denmark, df$Italia)
+ccf(df$Denmark, df$India)
+
+# Norway
+ccf(df$Norway, df$Denmark)
+ccf(df$Norway, df$Britain)
+ccf(df$Norway, df$Italia)
+ccf(df$Norway, df$India)
+
+# Britain
+ccf(df$Britain, df$Denmark)
+ccf(df$Britain, df$Norway)
+ccf(df$Britain, df$Italia)
+ccf(df$Britain, df$India)
+
+# Italia
+ccf(df$Italia, df$Denmark)
+ccf(df$Italia, df$Norway)
+ccf(df$Italia, df$Britain)
+ccf(df$Italia, df$India)
+
+# India
+ccf(df$India, df$Denmark)
+ccf(df$India, df$Norway)
+ccf(df$India, df$Britain)
+ccf(df$India, df$Italia)
+
+```
+
+From the correlation matrix it can be seen that Denmark, Norway, Great Britain 
+and Italia show high, positive correlation with each other. 
+The value for the correlation coefficient between Norway and Italia is 
+0.429 and above 0.6 for the other countries mentioned.
+Sweden show relatively low correlation with the other countries. 
+India is negatively correlated with the other countries, except from Sweden.
+
+Looking at the autocorrelation plots for each country; all the countries, 
+except Sweden, have spikes above the line for being statistically significant. 
+This mean the measurements in the series are positively autocorrelated for 
+lags up to 28 days. The autocorrelation plot for Sweden indicate autocorrelation
+for lags up to 3 days, then it alternates between 2 days of no 
+autocorrelation and 5 days with autocorrelation. 
+
+Due to the amount of plots, not all the cross-correlation plots are
+displayed.
+Denmark, Norway, Great Britain and Italia show statistically significant
+positive cross-correlation for the entire period visualized; -25 to +25 days lag.
+Sweden shows cross-correlation between Italia and with India up to a lag
+of 13 days. With Denmark, Norway and Great Britain, Sweden shows cyclical
+periods of cross-correlation and no cross-correlation. 
+The plots for India indicate positive cross-correlation with Sweden, and both
+negative and positive cross-correlation with Italia. For the other countries, 
+the plots show that India has negative cross-correlation for the entire
+period visualized, and mostly significantly low values. 
+
+
+# c)
+
+```{r Transformations covid}
+# Transformations
+# ------------------------------------------------------------------------------
+
+# Copy of dataframe
+dfT <- df
+# Setting date as index
+rownames(dfT) <- dfT$Date
+dfT <- select(dfT, Sweden, Denmark, Norway, Britain, Italia, India)
+
+# Remove missing values (even though there should not be any)
+dfT <- na.omit(dfT)
+
+# PCA transform
+df.pca <- princomp(dfT, scale=TRUE)
+
+# Scores and loadings
+#df.pca$scores
+#df.pca$loadings
+
+# Summary and plot
+# plot(df.pca)
+# biplot(df.pca)
+summary(df.pca)
+
+# Explained variance
+fviz_eig(df.pca)
+
+# Plot of scores
+fviz_pca_ind(df.pca,
+             col.ind = 'cos2', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = FALSE  
+)
+
+# Plot of loadings
+fviz_pca_var(df.pca,
+             col.var = 'contrib', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = TRUE   
+)
+
+# Biplot
+fviz_pca_biplot(df.pca, repel = FALSE,
+                col.var = '#1874CD', 
+                col.ind = '#66CDAA'  
+)
+
+
+
+```
+
+The principal components analysis shows that over 50% of the variance in the
+data can be explained by the first principal component. 
+The plot of the loadings show that Denmark, Norway, Great Britain and Italy are correlated,
+as they lie in the same direction in along the axis for the first principal component. 
+Denmark is contributing to most of the variance 
+in the first principal component. 
+India contributes to a very small amount of the variance in the dataset. 
+Sweden can be considered different compared to the other countries and is 
+responsible for almost all the variance in the second component. 
+
+
+
+
+# d)
+
+```{r Smoothing covid}
+# Smoothing 
+# ------------------------------------------------------------------------------
+# Sweden
+swe1 <- zoo::rollmean(df$Sweden, k=3, fill=NA)
+swe2 <- zoo::rollmean(df$Sweden, k=10, fill=NA)
+swe3 <- zoo::rollmean(df$Sweden, k=30, fill=NA)
+swe4 <- zoo::rollmean(df$Sweden, k=60, fill=NA)
+dfSweden <- data.frame(date, swe1, swe2, swe3, swe4)
+
+
+# Line plot of smoothing with different value for the kernel size
+colors <- c('k=3'='#CD950C', 'k=10'='#009ACD', 'k=30'='#8A360F',
+            'k=60'='#CD3333')
+
+ggplot(dfSweden, aes(x=date)) +
+  geom_line(aes(y=swe1, color='k=3'), size=1.0) +
+  geom_point(aes(y=swe1, color='k=3'), size=0.5) +
+  geom_line(aes(y=swe2, color='k=10'), size=1.0) + 
+  geom_point(aes(y=swe2, color='k=10'), size=0.5) +
+  geom_line(aes(y=swe3, color='k=30'), size=1.0) +
+  geom_point(aes(y=swe3, color='k=30'), size=0.5) +
+  geom_line(aes(y=swe4, color='k=60'), size=1.0) +
+  geom_point(aes(y=swe4, color='k=60'), size=0.5) +
+  labs(x='Date', y='New cases', color='Kernel size') +
+  scale_color_manual(values=colors)
+
+```
+
+```{r Smoothing entire time-series covid}
+# 
+# ------------------------------------------------------------------------------
+date <- df$Date
+dfS <- select(df, Sweden, Denmark, Britain, Norway, Italia, India)
+dfS <- zoo::rollmean(dfS, k=60, fill=NA)
+
+# New data.frame
+dfSm <- data.frame(date, dfS[,'Sweden'], dfS[,'Denmark'],
+                   dfS[,'Norway'], dfS[,'Britain'], 
+                   dfS[,'Italia'], dfS[,'India'])
+# Renaming data.frame
+names(dfSm) <- c('Date', 'Sweden', 'Denmark', 'Norway',
+                 'Britain', 'Italia', 'India')
+
+
+# Line plot of smoothed time-series
+colors <- c('Sweden'='#CD950C', 'Norway'='#009ACD', 'Denmark'='#CD3333',
+            'Britain'='#8A360F', 'Italia'='#9BCD9B', 'India'='#EE7600')
+
+p <- ggplot(dfSm, aes(x=date)) +
+  geom_line(aes(y=Sweden, color='Sweden'), size=1.0) +
+  geom_point(aes(y=Sweden, color='Sweden'), size=0.5) + 
+  geom_line(aes(y=Norway, color='Norway'), size=1.0) + 
+  geom_point(aes(y=Norway, color='Norway'), size=0.5) + 
+  geom_line(aes(y=Denmark, color='Denmark'), size=1.0) +
+  geom_point(aes(y=Denmark, color='Denmark'), size=0.5) + 
+  geom_line(aes(y=Britain, color='Britain'), size=1.0) +
+  geom_point(aes(y=Britain, color='Britain'), size=0.5) + 
+  geom_line(aes(y=Italia, color='Italia'), size=1.0) + 
+  geom_point(aes(y=Italia, color='Italia'), size=0.5) + 
+  geom_line(aes(y=India, color='India'), size=1.0) +
+  geom_point(aes(y=India, color='India'), size=0.5) + 
+  labs(x='Date', y='New cases', color='Country') +
+  scale_color_manual(values=colors)
+p
+
+```
+
+
+```{r PCA on smoothed time-series covid}
+# PCA on smoothed time-series
+# ------------------------------------------------------------------------------
+
+# Copy of dataframe
+dfT <- dfSm
+# Setting date as index
+rownames(dfT) <- dfT$Date
+dfT <- select(dfT, Sweden, Denmark, Norway, Britain, Italia, India)
+
+# Remove missing values
+dfT <- na.omit(dfT)
+
+# PCA transform
+df.pca <- princomp(dfT, scale=TRUE)
+
+# Scores and loadings
+#df.pca$scores
+#df.pca$loadings
+
+# Summary and plot
+# plot(df.pca)
+# biplot(df.pca)
+summary(df.pca)
+
+# Explained variance
+fviz_eig(df.pca)
+
+# Plot of scores
+fviz_pca_ind(df.pca,
+             col.ind = 'cos2', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = FALSE  
+)
+
+# Plot of loadings
+fviz_pca_var(df.pca,
+             col.var = 'contrib', 
+             gradient.cols = c('#00AFBB', '#E7B800', '#FC4E07'),
+             repel = TRUE   
+)
+
+# Biplot
+fviz_pca_biplot(df.pca, repel = FALSE,
+                col.var = '#1874CD', 
+                col.ind = '#66CDAA'  
+)
+```
+
+Different sizes for the kernel was tested for smoothing the series, with
+the example shown for Sweden. k=3 showed to be too low to filter away
+the measurements that were set to 0 and a kernel size of 100 could result in
+smoothing the curve to much. An appropriate kernel size could be 10, 30 or 60.
+By smoothing the entire series and looking at the line plot for the smoothed 
+series, it showed that a kernel size of 7 or higher also filtered 
+away the negative values.
+When performing the principal component analysis, the variance explained by
+the first component decreased some. After smoothing, the difference between
+Italia and Denmark, Norway and Great Britain decreased, but Italia showed to 
+be more similar to Sweden. India still lies in the opposite direction along the
+first principal component after smoothing the series. 
+
