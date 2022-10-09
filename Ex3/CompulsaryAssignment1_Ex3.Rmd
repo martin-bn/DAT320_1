@@ -32,26 +32,19 @@ library('factoextra')
 
 ```{r Data, message=FALSE}
 
-# Loading data
-covid <- read_csv("data/covid.csv")
-# View(covid)
-# str(covid)
+# Loading the data
+covid <- read.csv('Data/covid.csv')
+column_names <- colnames(covid)
 
-# Selecting time-window 
-covid <- covid[covid$date >= "2020-03-16" & covid$date <= "2022-01-01", ] 
+# Selecting countries and time-window
+iso_codes <- c('SWE', 'DNK', 'NOR', 'GBR', 'ITA', 'IND')
+covid <- covid[covid$date >= '2020-03-16' & covid$date <= '2022-01-01', ] 
+covid$date <- as.Date(covid$date)
+covid <- covid[covid$iso_code %in% iso_codes, c('date', 'iso_code', 'new_cases_per_million')]
 
-# Selecting countries
-countries <- c('SWE', 'DNK', 'NOR', 'GBR', 'ITA', 'IND')
-covid <- covid[covid$iso_code %in% countries,]
+# Missing values
+which(is.na(df))
 
-# Selecting columns
-covid <- select(covid, date, iso_code, new_cases_per_million)
-
-# Checking that date-column is in correct format
-class(covid$date)
-
-# Summary statistics of data.frame
-summary(covid)
 
 ```
 
@@ -59,27 +52,23 @@ summary(covid)
 ```{r Data.frame, echo=FALSE}
 
 # Reshaping data.frame
-date <- covid$date
-date <- date[!duplicated(date)]
+df <- reshape(data = covid,
+              idvar = 'date',
+              timevar = 'iso_code',
+              v.names = 'new_cases_per_million',
+              direction = 'wide')
 
-swe <- covid[covid$iso_code == 'SWE', ]
-swe <- select(swe, new_cases_per_million)
-dnk <- covid[covid$iso_code == 'DNK', ]
-dnk <- select(dnk, new_cases_per_million)
-nor <- covid[covid$iso_code == 'NOR', ]
-nor <- select(nor, new_cases_per_million)
-gbr <- covid[covid$iso_code == 'GBR', ]
-gbr <- select(gbr, new_cases_per_million)
-ita <- covid[covid$iso_code == 'ITA', ]
-ita <- select(ita, new_cases_per_million)
-ind <- covid[covid$iso_code == 'IND', ]
-ind <- select(ind, new_cases_per_million)
-
-df <- data.frame(date, swe, dnk, nor, gbr, ita, ind)
+# Missing values
+which(is.na(df))
 
 # Renaming data.frame
-names(df) <- c('Date', 'Sweden', 'Denmark', 'Norway', 
-               'Britain', 'Italia', 'India')
+names(df) <- c('Date', 'Denmark', 'India', 'Italia', 
+                'Norway', 'Sweden', 'Britain')
+
+# Dimensionality
+nrow(df)
+ncol(df)
+dim(df)
 
 
 ```
@@ -352,6 +341,7 @@ responsible for almost all the variance in the second component.
 
 ```{r Smoothing, warning=FALSE}
 
+date <- df$Date
 # Rolling mean with different values for the kernel size
 swe1 <- zoo::rollmean(df$Sweden, k=3, fill=NA)
 swe2 <- zoo::rollmean(df$Sweden, k=10, fill=NA)

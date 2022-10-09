@@ -17,56 +17,28 @@ library('factoextra')
 # ------------------------------------------------------------------------------
 
 # Loading the data
-covid <- read_csv('VET/Courses/DAT320/Compulsary/Assignment1/data/covid.csv')
-# View(covid)
-# str(covid)
+covid <- read.csv('VET/Courses/DAT320/Compulsary/Assignment1/data/covid.csv')
+column_names <- colnames(covid)
 
-# Selecting time-window 
+# Selecting countries and time-window
+iso_codes <- c('SWE', 'DNK', 'NOR', 'GBR', 'ITA', 'IND')
 covid <- covid[covid$date >= '2020-03-16' & covid$date <= '2022-01-01', ] 
-
-# Selecting countries and columns
-countries <- c('SWE', 'DNK', 'NOR', 'GBR', 'ITA', 'IND')
-covid <- covid[covid$iso_code %in% countries, c('date', 'iso_code', 'new_cases_per_million')]
-
-# Checking that date-column is in correct format
-class(covid$date)
-
-# Summary statistics of data.frame
-summary(covid)
-
-"
-# Reshaping data.frame
-data_wide <- reshape(data = covid,
-                     idvar = 'date',
-                     timevar = 'iso_code',
-                     v.names = 'new_cases_per_million',
-                     direction = 'wide')
-"
-
+covid$date <- as.Date(covid$date)
+covid <- covid[covid$iso_code %in% iso_codes, c('date', 'iso_code', 'new_cases_per_million')]
 
 # Reshaping data.frame
-date <- covid$date
-date <- date[!duplicated(date)]
+df <- reshape(data = covid,
+              idvar = 'date',
+              timevar = 'iso_code',
+              v.names = 'new_cases_per_million',
+              direction = 'wide')
 
-swe <- covid[covid$iso_code == 'SWE', ]
-swe <- select(swe, new_cases_per_million)
-dnk <- covid[covid$iso_code == 'DNK', ]
-dnk <- select(dnk, new_cases_per_million)
-nor <- covid[covid$iso_code == 'NOR', ]
-nor <- select(nor, new_cases_per_million)
-gbr <- covid[covid$iso_code == 'GBR', ]
-gbr <- select(gbr, new_cases_per_million)
-ita <- covid[covid$iso_code == 'ITA', ]
-ita <- select(ita, new_cases_per_million)
-ind <- covid[covid$iso_code == 'IND', ]
-ind <- select(ind, new_cases_per_million)
-
-df <- data.frame(date, swe, dnk, nor, gbr, ita, ind)
+# Missing values
+which(is.na(df))
 
 # Renaming data.frame
-names(df) <- c('Date', 'Sweden', 'Denmark', 'Norway', 
-               'Britain', 'Italia', 'India')
-
+names(df) <- c('Date', 'Denmark', 'India', 'Italia', 
+                'Norway', 'Sweden', 'Britain')
 
 # Dimensionality
 nrow(df)
@@ -84,6 +56,7 @@ is.na(df$Britain)
 is.na(df$Italia)
 is.na(df$India)
 which(is.na(df))
+
 
 
 # Plots 
