@@ -1,0 +1,260 @@
+---
+title: "Untitled"
+output: html_document
+date: "2022-10-27"
+---
+
+```{r}
+#install.packages("rmarkdown")
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(naniar)
+library(imputeTS)
+library(uroot)
+library(forecast)
+library(Metrics)
+```
+```{r}
+# (A):
+data <- read.csv("~/Documents/skole/dat320/oblig/oblig2/traffic_volume.csv")
+data <- data %>% subset((date_time >=ymd("2013-01-01") & date_time <= ymd("2015-12-31") ))
+data$date_time <- as.Date(data$date_time)
+data$date_time[1]
+```
+
+```{r}
+vis_miss(data)
+```
+```{r}
+df <- data %>%
+  mutate(date_time = floor_date(date_time)) %>%
+  group_by((date_time)) %>%
+  summarise(traffic_volume = mean(traffic_volume),
+            rain = mean(rain),
+            snow = mean(snow),
+            clouds = mean(clouds),
+            temperature = mean(temperature))
+
+colnames(df)
+colnames(df)[1] <- "date"
+colnames(df)
+```
+```{r}
+ts_traffic_volume <- ts(df$traffic_volume, frequency=7)
+ts_traffic_volume_yearly <- ts(df$traffic_volume, frequency=365)
+ndiffs(ts_traffic_volume)
+```
+```{r}
+nsdiffs(ts_traffic_volume)
+nsdiffs(ts_traffic_volume_yearly)
+```
+```{r}
+df <- as.data.frame(df)  
+plot(x=df$date, y=df$traffic_volume, type = 'l')
+diff(ts_traffic_volume) %>% autoplot()
+diff(ts_traffic_volume_yearly) %>% autoplot()
+```
+```{r}
+pacf(df$traffic_volume)
+acf(df$traffic_volume)
+```
+```{r}
+pacf(diff(df$traffic_volume, lags=7))
+acf(diff(df$traffic_volume, lags=7))
+```
+```{r}
+library(tseries)
+kpss.test(df$traffic_volume)
+```
+```{r}
+# - by exploring the data
+# - kpss has a p value larger than 0.05. This data hold the assumption for no trend, stationary for trend holds. And we will not diff the data.
+# - ACF -> MA:BAsed on th plot, we will note MA(2), MA(8)
+# - PACF -> AR: Based on the plot, we will note AR(2), AR(8)
+# - ACF and PACF looks different, but they have some similar significant lags.
+
+# - We chose sesonality of 7, this is because of the nsdiff
+# function. This result in 1 for lags of 7 and 0 for lags of 365
+
+# - When we plot with sesonal diff, we can see that the data goes from being seasonal to be stationary 
+# When we differentiate with lag and plot the acf and pacf. the plot look the same 
+# for lags of 7
+# - s diff ACF -> SMA (1)
+# - s diff pacf -> SAR(O) OR SAR(7)
+# - Diff by 1 sesonal 7 beacuse of the plot
+```
+
+
+
+```{r}
+# (B):
+df_train <- df %>% subset((date >= ymd("2013-01-01")) & (date < ymd("2014-12-31")))
+df_test <- df %>% subset((date >= ymd("2015-01-01")) & (date < ymd("2015-12-31")))
+
+df_train$traffic_volume <- ts(df_train$traffic_volume, frequency=7)
+```
+```{r}
+# manual arima
+arima_manuel <- Arima(df_train$traffic_volume, order = c(2, 0, 2), seasonal = c(0, 0, 1)) #ARIMA(2, 0, 2)(0, 1, 1)
+arima_manuel_pred <- forecast(arima_manuel, h=364)
+arima_manuel_pred %>% autoplot()
+```
+```{r}
+summary(arima_manuel)
+checkresiduals(arima_manuel)
+arima_rmse <- rmse(df_test$traffic_volume, arima_manuel_pred$mean)
+arima_rmse
+```
+```{r}
+# manual sarima
+sarima_manuel <- Arima(df_train$traffic_volume, order = c(2, 0, 2), seasonal = c(0, 1, 1)) #ARIMA(2, 0, 2)(0, 1, 1)
+sarima_manuel_pred <- forecast(sarima_manuel, h=364)
+sarima_manuel_pred %>% autoplot()
+```
+```{r}
+summary(sarima_manuel)
+checkresiduals(sarima_manuel)
+sarima_rmse <- rmse(df_test$traffic_volume, sarima_manuel_pred$mean)
+sarima_rmse
+```
+
+```{r}
+# auto arima
+sarima_mod <- auto.arima(df_train$traffic_volume)
+sarima_pred <- forecast(sarima_mod, h=364)
+sarima_pred %>% autoplot()
+```
+```{r}
+summary(sarima_mod)
+checkresiduals(sarima_mod)
+sarima_rmse <- rmse(df_test$traffic_volume, sarima_pred$mean)
+sarima_rmse
+```
+
+```{r}
+# By experimenting and analysis of the preprocessing we have found some parameters
+# - The plot looks kind of similar. Our mode perform a bit worse than the auto arima.
+# - The rmse is better on the normal arima, but it ignore all of the strucktur of the data.
+#  Results of rmse imply that the best model not necessary have the lowest rmse
+# - residuels in the manuel tuned arima and auto arima have just on significant residual acf lag. Which is not ideel but acceptable .
+# normal arima without seasonality have to much correlation in the residuals. 
+ 
+#(C)
+# ARIMAX for diffent features
+```
+```{r}
+### ARIMAX for rain
+sarimax_rain_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, "rain"]))
+sarimax_rain <- forecast(sarimax_rain_mod, h=365, xreg = as.matrix(df_test[, "rain"]))
+sarimax_rain %>% autoplot()
+```
+```{r}
+summary(sarimax_rain_mod)
+checkresiduals(sarimax_rain_mod)
+sarimax_rain_rmse <- rmse(df_test$traffic_volume, sarimax_rain$mean)
+sarimax_rain_rmse
+```
+```{r}
+### ARIMAX for snow
+sarimax_snow_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, "rain"]))
+sarimax_snow <- forecast(sarimax_snow_mod, h=365, xreg = as.matrix(df_test[, "rain"]))
+sarimax_snow %>% autoplot()
+```
+```{r}
+summary(sarimax_snow_mod)
+checkresiduals(sarimax_snow_mod)
+sarimax_snow_rmse <- rmse(df_test$traffic_volume, sarimax_snow$mean)
+sarimax_snow_rmse
+```
+```{r}
+### ARIMAX for snow
+sarimax_snow_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, "snow"]))
+sarimax_snow <- forecast(sarimax_snow_mod, h=365, xreg = as.matrix(df_test[, "snow"]))
+sarimax_snow %>% autoplot()
+```
+```{r}
+summary(sarimax_snow_mod)
+checkresiduals(sarimax_snow_mod)
+sarimax_snow_rmse <- rmse(df_test$traffic_volume, sarimax_snow$mean)
+sarimax_snow_rmse
+```
+```{r}
+### ARIMX for clouds
+sarimax_clouds_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, "clouds"]))
+sarimax_clouds <- forecast(sarimax_snow_mod, h=365, xreg = as.matrix(df_test[, "clouds"]))
+sarimax_clouds %>% autoplot()
+```
+```{r}
+summary(sarimax_clouds_mod)
+checkresiduals(sarimax_clouds_mod)
+sarimax_clouds_rmse <- rmse(df_test$traffic_volume, sarimax_clouds$mean)
+sarimax_clouds_rmse
+```
+```{r}
+### ARIMX for temperature
+sarimax_temperature_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, "temperature"]))
+sarimax_temperature <- forecast(sarimax_temperature_mod, h=365, xreg = as.matrix(df_test[, "temperature"]))
+sarimax_temperature %>% autoplot()
+```
+```{r}
+summary(sarimax_temperature_mod)
+checkresiduals(sarimax_temperature_mod)
+sarimax_temperature_rmse <- rmse(df_test$traffic_volume, sarimax_temperature$mean)
+sarimax_temperature_rmse
+```
+```{r}
+# SARIMAX all features
+sarimax_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, 3:6]))
+sarimax <- forecast(sarimax_mod, h=365, xreg = as.matrix(df_test[, 3:6]))
+sarimax %>% autoplot()
+```
+```{r}
+summary(sarimax_mod)
+checkresiduals(sarimax_mod)
+sarimax_rmse <- rmse(df_test$traffic_volume, sarimax$mean)
+sarimax_rmse
+```
+```{r}
+# SARIMAX selected features
+# based on the rmse, snow and temprature add good inforamtion to the model.
+sarimax_selected_mod <- auto.arima(df_train$traffic_volume, xreg = as.matrix(df_train[, c("temperature", "snow")]))
+sarimax_selected <- forecast(sarimax_selected_mod, h=365, xreg = as.matrix(df_test[, c("temperature", "snow")]))
+sarimax_selected %>% autoplot()
+```
+```{r}
+summary(sarimax_mod)
+checkresiduals(sarimax_mod)
+sarimax_selected_rmse <- rmse(df_test$traffic_volume, sarimax$mean)
+sarimax_selected_rmse
+```
+```{r}
+# (D)
+# By compare the rmse scores of each model, we can see that by adding regression, the rmes score generaly decrease.
+# But this is not the case for each features. In the case for clouds the rmse are 393731.
+# This might be because of clouds being a categorical feature and not relevant.
+#In the case of rain, we can se that the feature rain only add some noise and the preformace is a bit worse. 
+# - AIRMAX is a good model if the other features add information relevant ot the value for prediction. 
+# If the features are not relevant, this can add unnecessary complexity to the model and reduce the performance.
+# For this data, including additional features will increase the predictive power for the model and SARIMAX is better than the standard SARIMA.
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
