@@ -1,0 +1,94 @@
+---
+title: "Task 4 Oblig 3"
+---
+
+# A)
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+
+data <- read.csv("~/Documents/skole/dat320/oblig/3/data/covid.csv")
+colnames(data)
+```
+
+```{r}
+unique(data$iso_code)
+```
+
+```{r}
+data
+```
+
+```{r}
+row.names(data)[1:15]
+```
+
+```{r}
+df <- data %>%
+  mutate(date = ymd(date)) %>%
+  subset((date >= ymd("2020-09-01")) & (date <= ymd("2021-02-28"))) %>%
+  subset((iso_code %in% c("AUT", "CAN", "CHN", "DEU", "DNK", "GBR", "ITA", "NOR", "NLD", "SWE", "USA"))) %>%
+  dplyr::select(c("date", "iso_code", "new_cases_smoothed_per_million")) %>%
+  rename(cases = new_cases_smoothed_per_million) %>%
+  reshape(timevar="iso_code", idvar=c("date"), direction = "wide") %>%
+  as.data.frame()
+row.names(df) <- NULL
+df
+```
+
+```{r}
+colSums(is.na(df))
+```
+
+```{r}
+df_long <- df %>% reshape(varying = colnames(df)[-1],
+               timevar = "iso_code",
+               direction = "long") %>%
+  dplyr::select(c("date","iso_code","cases")) 
+row.names(df_long) <- NULL
+df_long
+```
+
+```{r}
+ggplot(data =df_long, aes(x=date, y=cases, color=iso_code)) +
+  geom_line()
+```
+```{r}
+#options(rgl.useNULL = TRUE)
+#install.packages("rgl")
+#install.packages("TSclust")
+library(TSclust)
+library(cluster)
+#install.packages("clValid")
+library(clValid)
+df_dist <- diss(df[-1], METHOD="EUCL")
+df_dist
+```
+
+```{r}
+hcl_eucl <- hclust(df_dist, method="complete")
+plot(hcl_eucl)
+```
+```{r}
+cl <- cutree(hcl_eucl, k=5)
+```
+
+```{r}
+clValid::dunn(distance = df_dist, clusters = cl)
+```
+
+```{r}
+cluster::silhouette(x = cl, dist=df_dist)
+```
+
+
+```{r}
+cl <- as.factor(cl)
+
+cl
+df %>%
+  mutate(cluster = cl)
+```
