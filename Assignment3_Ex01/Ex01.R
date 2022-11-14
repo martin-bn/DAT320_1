@@ -31,44 +31,43 @@ library(caret)
 # Loading data
 jogging <- read.csv('VET/Courses/DAT320/Compulsary/Assignment3/data/jogging.csv')
 column_names <- colnames(jogging)
-ts <- ts(jogging)
-
 
 # Missing values
-statsNA(ts[, 'HR'])
-statsNA(ts[, 'Speed'])
-statsNA(ts[, 'GT'])
+statsNA(jogging$HR)
+statsNA(jogging$Speed)
+statsNA(jogging$GT)
 
 # Summary
-summary(ts)
+summary(jogging)
+
+# Unique values for GT
+unique(jogging$GT)
 
 
 # Plotting
-colors <- c('HR'='#6495ED', 'Speed'='#20B2AA', 'GT'='#8968CD')
-ggplot(jogging, aes(x=Time)) +
-  geom_point(aes(y=HR, color='HR'), size=0.5) +
-  geom_point(aes(y=Speed, color='Speed'), size=0.5) +
-  geom_point(aes(y=GT, color='GT'), size=0.5) +
-  labs(x='Time', y='Value', color='Measurement') +
-  scale_color_manual(values=colors)
-
-# Obvious change-points in the variables HR and speed?
-# Dividing plots
 # HR
-colors <- c('HR'='#6495ED')
-ggplot(jogging, aes(x=Time)) +
-  geom_point(aes(y=HR, color='HR'), size=0.5) +
-  labs(x='Time', y='Value', color='Measurement') +
-  scale_color_manual(values=colors)
+plot_hr <- ggplot(jogging, aes(x=Time, y=HR, color=GT)) +
+  geom_line()
 
-# Speed and GT
-colors <- c('Speed'='#20B2AA', 'GT'='#8968CD')
-ggplot(jogging, aes(x=Time)) +
-  geom_point(aes(y=Speed, color='Speed'), size=0.5) +
-  geom_point(aes(y=GT, color='GT'), size=0.5) +
-  labs(x='Time', y='Value', color='Measurement') +
-  scale_color_manual(values=colors)
+plot(plot_hr)
 
+# Speed
+plot_speed <- ggplot(jogging, aes(x=Time, y=Speed, color=GT)) +
+  geom_line()
+
+plot(plot_speed)
+
+"
+Any obvious change points, suggesting a transition from one 
+underlying state to the next?
+
+From HR plot: Hard to point out specific time points, but it can be
+considered that the local minimum- and maximum values in the graph
+represent different underlying states. 
+From Speed plot: Clustering of measurements around what could be 
+considered different underlying states. Change points would in this case
+be points where the value either rapidly increases or decreases. 
+"
 
 
 # Task 2
@@ -88,25 +87,19 @@ modelHR <- depmixS4::fit(modelHR)
 summary(modelHR)
 
 # Estimated states and probabilities
-posteriorHR <- posterior(modelHR, type='viterbi')
+stateHR <- posterior(modelHR, type='viterbi')
+
+# Adding estimated states to dataframe
+jogging$modelHR <- stateHR$state
 
 
 # Plotting 
 # ------------------------------------------------------------------------------
 # States
-ggplot(posteriorHR, aes(x=as.numeric(row.names(posteriorHR)), 
-                        y=state, colour = factor(state))) +
-  geom_point(size=1.5) + 
-  labs(x='Time', y='Value', color='State')
+hr <- ggplot(jogging, aes(x=Time, y=HR, color=modelHR)) +
+  geom_line()
+plot(hr)
 
-# Probabilities
-colors <- c('S1'='#6495ED', 'S2'='#20B2AA', 'S3'='#8968CD')
-ggplot(posteriorHR, aes(x = as.numeric(row.names(posteriorHR)))) +
-  geom_point(aes(y=S1, color='S1'), size=1.5) +
-  geom_point(aes(y=S2, color='S2'), size=1.5) +
-  geom_point(aes(y=S3, color='S3'), size=1.5) +
-  labs(x='Time', y='Value', color='StateProb') +
-  scale_color_manual(values=colors)
 
 
 # Speed model
@@ -122,25 +115,19 @@ modelSpeed <- depmixS4::fit(modelSpeed)
 summary(modelSpeed)
 
 # Estimated states and probabilities
-posteriorSpeed <- posterior(modelSpeed, type='viterbi')
+stateSpeed <- posterior(modelSpeed, type='viterbi')
+
+# Adding estimated states to dataframe
+jogging$modelSpeed <- stateSpeed$state
 
 
 # Plotting 
 # ------------------------------------------------------------------------------
 # States
-ggplot(posteriorSpeed, aes(x=as.numeric(row.names(posteriorSpeed)), 
-                        y=state, colour=factor(state))) +
-  geom_point(size=1.5) + 
-  labs(x='Time', y='Value', color='State')
+speed <- ggplot(jogging, aes(x=Time, y=Speed, color=modelSpeed)) +
+  geom_line()
+plot(speed)
 
-# Probabilities
-colors <- c('S1'='#6495ED', 'S2'='#20B2AA', 'S3'='#8968CD')
-ggplot(posteriorSpeed, aes(x = as.numeric(row.names(posteriorSpeed)))) +
-  geom_point(aes(y=S1, color='S1'), size=1.5) +
-  geom_point(aes(y=S2, color='S2'), size=1.5) +
-  geom_point(aes(y=S3, color='S3'), size=1.5) +
-  labs(x='Time', y='Value', color='StateProb') +
-  scale_color_manual(values=colors)
 
 
 # Task C
@@ -151,13 +138,12 @@ a confusion matrix.
 "
 
 actual = factor(jogging$GT)
-prediction1 = factor(posteriorHR$state)
-prediction2 = factor(posteriorSpeed$state)
+prediction1 = factor(jogging$modelHR)
+prediction2 = factor(jogging$modelSpeed)
 
 # HR
 matrixHR <- confusionMatrix(data=prediction1, reference=actual)
 matrixHR
-
 
 # Speed
 matrixSpeed <- confusionMatrix(data=prediction2, reference=actual)
