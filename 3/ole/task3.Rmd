@@ -1,0 +1,112 @@
+#A) 
+
+---
+title: "Task 4 Oblig 3"
+---
+
+```{r}
+library("dplyr")
+library(ggplot2)
+
+train <- read.csv("~/Documents/skole/dat320/oblig/3/data/hs_train.csv")
+test <- read.csv("~/Documents/skole/dat320/oblig/3/data/hs_test.csv")
+
+dim(train)
+```
+
+```{r}
+colnames(train)
+```
+```{r}
+colnames(test)
+```
+
+```{r}
+unique(train$class)
+```
+
+```{r}
+train$id = seq(1, 10915)
+df_long <- train %>% reshape(varying = colnames(train)[1:188],
+               v.names = "value",
+               timevar = "V",
+               direction = "long") %>%
+  dplyr::select(c("id", "V", "value", "class")) %>%
+  dplyr::arrange(id)
+row.names(df_long) <- NULL
+
+ggplot(data = df_long[1:(188*100),], aes(y=value, x=V, color=class)) +
+  geom_line()
+
+```
+
+```{r}
+#install.packages('Rmisc', dependencies = TRUE)
+library("Rmisc")
+summary_data <- summarySE(df_long, measurevar = "value", groupvars = c("class", "V"))
+summary_data
+```
+```{r}
+pd <- position_dodge(0.3)
+pd1 <- position_dodge(0.6)
+ggplot(summary_data, aes(x=V, y=value, colour=class)) + 
+    geom_errorbar(aes(ymin=value-sd*1.96, ymax=value+sd*1.96), width=.1, position=pd) +
+    geom_line(position=pd) +
+    geom_point(position=pd)
+```
+# B)
+
+```{r}
+library(tsfeatures)
+library(caret)
+y_train <- ifelse(train$class == "normal", 0, 1)
+train_slice <- caret::createDataPartition(train$class, p=0.01, list=FALSE)
+
+unique(y_train)
+```
+
+```{r}
+train_mat <- train[, -c(ncol(train), ncol(train)-1)] 
+train_features = tsfeatures(t(train_mat)) %>% 
+  as.data.frame()
+```
+
+### Train random forest
+```{r}
+rf.model <- caret::train(x=train_features[train_slice,],
+                         y=y_train[train_slice],
+                         method="rf")
+```
+
+```{r}
+rf.pred <- predict(rf.model, newdata = train_features[-train_slice,])
+rf.pred
+
+pred <- ifelse(rf.pred > 0.5, 1, 0)
+
+(length(pred) - sum(abs(pred-y_train[-train_slice])) ) / length(pred)
+```
+
+```{r}
+library(caret)
+```
+
+```{r}
+sum(unname(pred) - y_train[-train_slice])
+```
+
+```{r}
+caret::confusionMatrix(data=factor(unname(pred)), reference = factor(y_train[-train_slice]))
+```
+```{r}
+y_train[-train_slice]
+```
+
+
+```{r}
+factor(unname(pred))
+```
+
+```{r}
+factor(y_train[-train_slice])
+```

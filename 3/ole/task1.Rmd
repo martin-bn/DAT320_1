@@ -1,0 +1,123 @@
+---
+title: "Task 1 Oblig 3"
+---
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+library(patchwork)
+```
+
+### Info
+# - GT: ground truth
+# - HR: heart rate
+# - Speed: speed
+
+
+```{r}
+data <- read.csv("~/Documents/skole/dat320/oblig/3/data/jogging.csv")
+```
+
+```{r}
+colnames(data)
+```
+
+```{r}
+unique(data$GT)
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+g_speed <- ggplot(data, aes(x=Time, y=Speed, color=GT)) +
+  geom_line()
+
+g_hr <- ggplot(data, aes(x=Time, y=HR, color=GT)) +
+  geom_line()
+plot(g_speed / g_hr)
+```
+
+```{r}
+gg <- ggplot(data, aes(x=Speed, y=HR, color=GT)) +
+  geom_point()
+plot(gg)
+```
+
+### B
+
+```{r}
+library(depmixS4)
+hmm.speed <- depmix(response = GT ~ 1,
+                  data = data[,c(1, 3, 4)],
+                  nstates = 3,
+                  family = gaussian())
+hmm.speed <- fit(hmm.speed)
+summary(hmm.speed)
+```
+
+```{r}
+state_speed <- posterior(hmm.speed)
+head(state_speed)
+```
+```{r}
+data[,c(1, 3, 4)] %>% mutate(state = state_speed[,1]) %>%
+  ggplot(aes(x = Time, y = Speed, color = state)) +
+  geom_line()
+```
+```{r}
+hmm.HR <- depmix(response = GT ~ 1,
+                  data = data[,c(1, 2, 4)],
+                  nstates = 3,
+                  family = gaussian())
+hmm.HR <- fit(hmm.HR)
+summary(hmm.HR)
+```
+```{r}
+state_HR <- posterior(hmm.HR)
+head(state_HR)
+```
+
+```{r}
+data[,c(1, 3, 4)] %>% mutate(state = state_HR[,1]) %>%
+  ggplot(aes(x = Time, y = Speed, color = state)) +
+  geom_line()
+```
+### Results
+i dont know why, but the states have switch.
+
+# C)
+
+```{r}
+library(caret)
+```
+
+
+```{r}
+caret::confusionMatrix(as.factor(state_speed[,1]),
+                       reference=as.factor(data$GT),
+                       positive="True")
+```
+
+```{r}
+caret::confusionMatrix(as.factor(state_HR[,1]),
+                       reference=as.factor(data$GT),
+                       positive="True")
+```
+
+# D)
+IDK
+
+
+
+
+
+
+
