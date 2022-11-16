@@ -15,11 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(dplyr)
 library(ggplot2)
-library(tidyverse)
-library(lubridate)
-library(reshape2)
-library(tseries)
-library(forecast)
 library(tidyr)
 library(imputeTS)
 library(depmixS4)
@@ -80,10 +75,8 @@ plot(plot_speed)
 ```
 
 
-Any obvious change points, suggesting a transition from one 
-underlying state to the next?
-
-From HR plot: Hard to point out specific time points, but it can be
+From HR plot: Hard to point out specific time points suggesting a 
+transition from one underlying state to the next, but it can be
 considered that the local minimum- and maximum values in the graph
 represent different underlying states. 
 From Speed plot: Clustering of measurements around what could be 
@@ -165,34 +158,31 @@ Comparing estimated states and ground truth state using a confusion matrix
 
 ```{r}
 actual = factor(jogging$GT)
-predictionHR = factor(jogging$modelHR)
-predictionSpeed = factor(jogging$modelSpeed)
+predHR = factor(jogging$modelHR)
+predSpeed = factor(jogging$modelSpeed)
 
 # Confusion matrix HR
-matrixHR <- confusionMatrix(data=predictionHR, reference=actual)
+matrixHR <- confusionMatrix(data=predHR, reference=actual)
 matrixHR
 
 ```
 
 ```{r}
 # Confusion matrix Speed
-matrixSpeed <- confusionMatrix(data=predictionSpeed, reference=actual)
+matrixSpeed <- confusionMatrix(data=predSpeed, reference=actual)
 matrixSpeed
 
 ```
 
-\newpage
 
+### Task D
 
-Interpret the results. 
-Are the model assumptions for Hidden Markov Models fulfilled in the two scenarios? 
-
-
-For the HR model: Best at estimating correctly for state 2, 
-and 0 Specificity for state 3. 
-Speed model: Lower overall accuracy compared to the HR model. 
-Almost all the state 1 cases is correctly classified, 
-but much lower correct estimations for the other states. 
+We see from the plots that the states have been permuted. 
+For the HR model all the states have been permuted and for the 
+speed model state 2 and state 3 have been permuted. The permutations 
+affect the statistics obtained from the confusion matrix. For
+the speed model state 1 is not permuted and the confusion matrix shows 
+a sensitivity of 0.99.
 
 
 Assumptions for Hidden Markov Model
@@ -200,9 +190,11 @@ Assumptions for Hidden Markov Model
 $$
 \begin{tabular}{ll}
 $X_{t}$ : A Markov chain and not directly observable \\
-$Y_{t}$ : Conditionally independent of $X_{t-1}, .., X_{1}$ given $X_{t}$ \\
-$Y_{t}$ : Dependent on $X_{t}$ with emission probabilities B
+$Y_{t}$ : Conditionally independent of $X_{t-1}, .., X_{1}$ given $X_{t}$ 
 \end{tabular}
 $$
 ```
 
+
+The models do not fulfill the assumptions, as the observed state is not
+independent of the previous observations. 

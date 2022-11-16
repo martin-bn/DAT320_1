@@ -14,11 +14,6 @@ GT: discrete ground truth speed level.
 library(readr)
 library(dplyr)
 library(ggplot2)
-library(tidyverse)
-library(lubridate)
-library(reshape2)
-library(tseries)
-library(forecast)
 library(tidyr)
 library(imputeTS)
 library(depmixS4)
@@ -48,20 +43,17 @@ unique(jogging$GT)
 # HR
 plot_hr <- ggplot(jogging, aes(x=Time, y=HR, color=GT)) +
   geom_line()
-
 plot(plot_hr)
 
 # Speed
 plot_speed <- ggplot(jogging, aes(x=Time, y=Speed, color=GT)) +
   geom_line()
-
 plot(plot_speed)
 
-"
-Any obvious change points, suggesting a transition from one 
-underlying state to the next?
 
-From HR plot: Hard to point out specific time points, but it can be
+"
+From HR plot: Hard to point out specific time points suggesting a 
+transition from one underlying state to the next, but it can be
 considered that the local minimum- and maximum values in the graph
 represent different underlying states. 
 From Speed plot: Clustering of measurements around what could be 
@@ -92,14 +84,10 @@ stateHR <- posterior(modelHR, type='viterbi')
 # Adding estimated states to dataframe
 jogging$modelHR <- stateHR$state
 
-
 # Plotting 
-# ------------------------------------------------------------------------------
-# States
 hr <- ggplot(jogging, aes(x=Time, y=HR, color=modelHR)) +
   geom_line()
 plot(hr)
-
 
 
 # Speed model
@@ -120,14 +108,10 @@ stateSpeed <- posterior(modelSpeed, type='viterbi')
 # Adding estimated states to dataframe
 jogging$modelSpeed <- stateSpeed$state
 
-
 # Plotting 
-# ------------------------------------------------------------------------------
-# States
 speed <- ggplot(jogging, aes(x=Time, y=Speed, color=modelSpeed)) +
   geom_line()
 plot(speed)
-
 
 
 # Task C
@@ -138,16 +122,17 @@ a confusion matrix.
 "
 
 actual = factor(jogging$GT)
-prediction1 = factor(jogging$modelHR)
-prediction2 = factor(jogging$modelSpeed)
+predHR = factor(jogging$modelHR)
+predSpeed = factor(jogging$modelSpeed)
 
 # HR
-matrixHR <- confusionMatrix(data=prediction1, reference=actual)
+matrixHR <- confusionMatrix(data=predHR, reference=actual)
 matrixHR
 
 # Speed
-matrixSpeed <- confusionMatrix(data=prediction2, reference=actual)
+matrixSpeed <- confusionMatrix(data=predSpeed, reference=actual)
 matrixSpeed
+
 
 # Task D
 # ------------------------------------------------------------------------------
@@ -157,9 +142,13 @@ fulfilled in the two scenarios?
 "
 
 "
-For the HR model: Best at estimating correctly for state 2, and 0 Specificity 
-for state 3. 
-Speed model: Lower overall accuracy compared to the HR model. Almost all the 
-state 1 cases is correctly classified, but much lower correct estimations 
-for the other states. 
+We see from the plots that the states have been permutated. 
+For the HR model all the states have been permutated and for the 
+speed model state 2 and state 3 have been permutated. The permutations 
+affect the statistics obtained from the confusion matrix. For
+the speed model state 1 is not permutated and the confusion matrix shows 
+a sensitivity of 0.99.
+
+The models do not fulfill the assumptions, as the observed state is not
+indepent of the previous observations. 
 "
