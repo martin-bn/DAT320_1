@@ -1,5 +1,6 @@
 ---
 title: "Task 4 Oblig 3"
+output: pdf_document
 ---
 
 # A)
@@ -19,7 +20,7 @@ unique(data$iso_code)
 ```
 
 ```{r}
-data
+head(data)
 ```
 
 ```{r}
@@ -36,7 +37,7 @@ df <- data %>%
   reshape(timevar="iso_code", idvar=c("date"), direction = "wide") %>%
   as.data.frame()
 row.names(df) <- NULL
-df
+head(df)
 ```
 
 ```{r}
@@ -49,46 +50,191 @@ df_long <- df %>% reshape(varying = colnames(df)[-1],
                direction = "long") %>%
   dplyr::select(c("date","iso_code","cases")) 
 row.names(df_long) <- NULL
-df_long
+head(df_long)
 ```
 
 ```{r}
 ggplot(data =df_long, aes(x=date, y=cases, color=iso_code)) +
   geom_line()
 ```
+
+### b):
+
+Compute pair-wise Euclidean distances between the given time series and perform hierarchical clustering. Plot the dendrogram and divide the data into k = 5 clusters. - The task is done in combination with task C).
+
+### c):
+
+Repeat task (b) with two other distance measures: Dynamic Time Warping (DTW) and an ARIMA-based distance measure. Compute evaluation metrics and compare the outputs of your models.
+
+-   The dun index is a ratio depicting the smalest distance between observations not in the same cluster compared with to the largest intra-cluster disntace (distance between a data item and the cluster centroid). ARIMA model has the best Dunn index. An index in which we are supose to maximize. The Dunn score it self is between [0, inf), so the large are not that large. But a value 2x and 3x the size of the other is quite significant. Read more at: <https://cran.r-project.org/web/packages/clValid/vignettes/clValid.pdf>
+
+-   silhouette width: Silhouette wide is the average of each observation's silhouette value. The silhoute value measures the confindence in the clusters and have the values in the range of [-1, 1]. -1 denote a poor measures, and 1 denotes good measures. Read more at the link above if interested. By evaluating the silhouett values, we can see that both ecludian and Dynamic time warping has negative values. And ARIMA is the only model with strictly posetive values.
+
+-   Dendrogram is a figure producsed based on hiarical clustering. THe plots y axis represents distanse and x axis represents labels. The figure is a intuetive tool for deciding the numbers of clusters. We can see that there are some groups ocuring in all of the dendograms. examples: (SWE, USA), (NOR, CHN).
+
+-   Plots: When we look at the 3 last plots we can see that ARIMAS plot reprsents the most differentiability between the clusters.
+
 ```{r}
-#options(rgl.useNULL = TRUE)
-#install.packages("rgl")
-#install.packages("TSclust")
+library(TSclust)
+library(cluster)
+library(clValid)
+df_dist_eucl <- diss(df[-1], METHOD="EUCL")
+df_dist_eucl
+df_dist_DRWARP <- diss(df[-1], METHOD="DTWARP")
+df_dist_DRWARP
+df_dist_PIC <- diss(df[-1], METHOD="AR.PIC")
+#df_dist_PIC
+```
+
+```{r}
+hcl_eucl <- hclust(df_dist_eucl, method="complete")
+plot(hcl_eucl)
+```
+
+```{r}
+hcl_DRWARP <- hclust(df_dist_DRWARP, method="complete")
+plot(hcl_DRWARP)
+
+```
+
+```{r}
+hcl_PIC <- hclust(df_dist_PIC, method="complete")
+plot(hcl_PIC)
+```
+
+```{r}
+cl_eucl <- cutree(hcl_eucl, k=5)
+cl_eucl
+```
+
+```{r}
+cl_DRWARP <- cutree(hcl_DRWARP, k=5)
+cl_DRWARP
+```
+
+```{r}
+cl_PIC <- cutree(hcl_PIC, k=5)
+cl_PIC
+```
+
+```{r}
 library(TSclust)
 library(cluster)
 #install.packages("clValid")
 library(clValid)
-df_dist <- diss(df[-1], METHOD="EUCL")
-df_dist
 ```
 
 ```{r}
-hcl_eucl <- hclust(df_dist, method="complete")
-plot(hcl_eucl)
-```
-```{r}
-cl <- cutree(hcl_eucl, k=5)
+clValid::dunn(distance = df_dist_eucl, clusters = cl_eucl)
 ```
 
 ```{r}
-clValid::dunn(distance = df_dist, clusters = cl)
+clValid::dunn(distance = df_dist_DRWARP, clusters = cl_DRWARP)
 ```
 
 ```{r}
-cluster::silhouette(x = cl, dist=df_dist)
+clValid::dunn(distance = df_dist_PIC, clusters = cl_PIC)
 ```
-
 
 ```{r}
-cl <- as.factor(cl)
-
-cl
-df %>%
-  mutate(cluster = cl)
+cluster::silhouette(x = cl_eucl, dist=df_dist_eucl)
 ```
+
+```{r}
+cluster::silhouette(x = cl_DRWARP, dist=df_dist_DRWARP)
+```
+
+```{r}
+cluster::silhouette(x = cl_PIC, dist=df_dist_PIC)
+```
+
+```{r}
+cl_eucl <- as.factor(cl_eucl)
+cl_DRWARP <- as.factor(cl_DRWARP)
+cl_PIC <- as.factor(cl_PIC)
+```
+
+```{r}
+eucl <- as.data.frame( t(df[,-1])) %>%
+  mutate(cluster = cl_eucl, country=colnames(df)[-1]) %>%
+  pivot_longer(cols = 1:181)
+eucl$name <- rep(1:181, 11)
+
+dewarp <- as.data.frame( t(df[,-1])) %>%
+  mutate(cluster = cl_DRWARP, country=colnames(df)[-1]) %>%
+  pivot_longer(cols = 1:181)
+dewarp$name <- rep(1:181, 11)
+
+pic <- as.data.frame( t(df[,-1])) %>%
+  mutate(cluster = cl_PIC, country=colnames(df)[-1]) %>%
+  pivot_longer(cols = 1:181)
+pic$name <- rep(1:181, 11)
+
+head(eucl)
+head(dewarp)
+```
+
+```{r}
+eucl %>% ggplot(aes(x = as.numeric(name), y = value, group_by = country , color = cluster)) + 
+    geom_line() + 
+    xlab("eucl")
+```
+
+```{r}
+dewarp %>% ggplot(aes(x = as.numeric(name), y = value, group_by = country , color = cluster)) + 
+    geom_line() + 
+    xlab("dewarp")
+```
+
+```{r}
+pic %>% ggplot(aes(x = as.numeric(name), y = value, group_by = country , color = cluster)) + 
+    geom_line() + 
+    xlab("ARIMA: Piccolo")
+```
+
+```{r}
+eucl %>% group_by(cluster, name) %>%
+  summarize(mean = mean(value),
+            sd = sd(value)) %>%
+  ggplot(aes(x = as.numeric(name), y = mean, color = cluster)) + 
+    geom_line() + 
+    geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, fill = cluster), alpha = 0.25) +
+    xlab("Ecludian") + 
+    facet_grid(cluster ~ .)
+```
+
+```{r}
+dewarp %>% group_by(cluster, name) %>%
+  summarize(mean = mean(value),
+            sd = sd(value)) %>%
+  ggplot(aes(x = as.numeric(name), y = mean, color = cluster)) + 
+    geom_line() + 
+    geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, fill = cluster), alpha = 0.25) +
+    xlab("dewarp") + 
+    facet_grid(cluster ~ .)
+```
+
+```{r}
+pic %>% group_by(cluster, name) %>%
+  summarize(mean = mean(value),
+            sd = sd(value)) %>%
+  ggplot(aes(x = as.numeric(name), y = mean, color = cluster)) + 
+    geom_line() + 
+    geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, fill = cluster), alpha = 0.25) +
+    xlab("ARIMA: Piccolo") + 
+    facet_grid(cluster ~ .)
+```
+
+# d)
+
+##### Compare the resulting clusters- which differences do you see between the methods?
+
+The ecludian and the dynamic time warping do both ignore connectivity if two series is out of sync. If we amuse that a country has the tendency of spread the disease to its neighbor country, the latency of the spreading will in both cases increase the distance. In the case of ARIMA, the model distance is based on the relationships of a time points neighboring points. This is not affected by the series latency, but the series over all structur.
+
+##### Wich distance measure is most appropiate for this type of dataset?
+
+For the reason stated above, a will only recommend ARIMA as meaning full model.
+
+##### Do the clusters support the hypothesis that countries with low spartial proximmit tend to show similar dynamics during the give nperiod in the pandemic?
+
+Based on the reslts above, we can see that there are some concretion for countrys with low spartial proximmit. At the same time we can se clear example demonstrating that this is not true. Example is SWE and USA. We can also see that neighboring countrys having a lot of distance. So we can say that there are some support, but equaly much disagreeing
